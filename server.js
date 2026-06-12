@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config/config');
 const logger = require('./utils/logger');
-const { dashboardAuth } = require('./middleware/authMiddleware');
+const { dashboardAuth, adminAuth } = require('./middleware/authMiddleware');
+const accountRoutes = require('./routes/accountRoutes');
 
 const app = express();
 
@@ -21,6 +22,9 @@ if (!fs.existsSync(dashboardPath)) {
     fs.mkdirSync(dashboardPath, { recursive: true });
 }
 app.use('/', dashboardAuth, express.static(dashboardPath));
+
+// API Routes
+app.use('/api/accounts', adminAuth, accountRoutes);
 
 // Ensure storage directories exist
 const setupStorage = () => {
@@ -42,12 +46,15 @@ const setupStorage = () => {
 
 setupStorage();
 
+const { initAllSessions } = require('./services/whatsappManager');
+
 // Basic health check route
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
 });
 
 // Start server
-app.listen(config.port, () => {
+app.listen(config.port, async () => {
     logger.info(`Server started on port ${config.port} in ${config.env} mode`);
+    await initAllSessions();
 });

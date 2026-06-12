@@ -9,9 +9,6 @@ yarn-error.log*
 node_modules/
 jspm_packages/
 
-# Environment variables
-.env
-.env.*
 
 # WhatsApp Sessions
 sessions/
