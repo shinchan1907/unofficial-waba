@@ -16,12 +16,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve dashboard static files with Basic Auth
+// Serve static files publicly (so CSS/JS load without auth issues)
 const dashboardPath = path.join(__dirname, 'dashboard');
 if (!fs.existsSync(dashboardPath)) {
     fs.mkdirSync(dashboardPath, { recursive: true });
 }
-app.use('/', dashboardAuth, express.static(dashboardPath));
+app.use(express.static(dashboardPath, { index: false }));
+
+// Protect the main HTML entry point with Basic Auth
+app.get('/', dashboardAuth, (req, res) => {
+    res.sendFile(path.join(dashboardPath, 'index.html'));
+});
 
 // API Routes
 app.use('/api/accounts', adminAuth, accountRoutes);
