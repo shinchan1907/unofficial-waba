@@ -1,1 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
 node_modules/
+jspm_packages/
+
+# Environment variables
+.env
+.env.*
+
+# WhatsApp Sessions
+sessions/
+whatsapp-server/sessions/
+
+# Application Storage
+storage/*
+!storage/.gitkeep
+whatsapp-server/storage/*
+!whatsapp-server/storage/.gitkeep
+
+# Editor directories and tools
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# MCP / Internal tooling
+.jetro/
