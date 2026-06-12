@@ -69,10 +69,28 @@ const logoutAccount = async (req, res) => {
     }
 };
 
+const updateWebhook = (req, res) => {
+    const { id } = req.params;
+    const { webhookUrl } = req.body;
+    
+    if (webhookUrl && !webhookUrl.startsWith('http')) {
+        return res.status(400).json({ success: false, error: 'Webhook URL must start with http/https' });
+    }
+
+    const success = whatsappManager.updateAccountWebhook(id, webhookUrl || null);
+    
+    if (success) {
+        res.json({ success: true, message: 'Webhook URL updated successfully' });
+    } else {
+        res.status(404).json({ success: false, error: 'Account not found' });
+    }
+};
+
 module.exports = {
     createAccount,
     getAccounts,
     getQrCode,
     getStatus,
-    logoutAccount
+    logoutAccount,
+    updateWebhook
 };

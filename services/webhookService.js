@@ -29,8 +29,12 @@ const handleIncomingMessage = async (accountId, message) => {
         // Log the received message to the UI
         logService.writeLog(accountId, 'MESSAGE_RECEIVED', `From: ${sender}`);
 
-        // Get webhook URL from environment
-        const webhookUrl = process.env.WEBHOOK_URL;
+        // Get specific account webhook, fallback to global env
+        const accounts = require('./whatsappManager').getAccounts();
+        const account = accounts.find(a => a.id === accountId);
+        
+        const webhookUrl = (account && account.webhookUrl) ? account.webhookUrl : process.env.WEBHOOK_URL;
+        
         if (!webhookUrl) return;
 
         const payload = {

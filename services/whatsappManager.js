@@ -27,6 +27,22 @@ const updateAccountStatus = (id, status, number = '-') => {
     }
 };
 
+const updateAccountWebhook = (id, webhookUrl) => {
+    try {
+        const accounts = JSON.parse(fs.readFileSync(config.storagePaths.accounts, 'utf8'));
+        const index = accounts.findIndex(a => a.id === id);
+        if (index > -1) {
+            accounts[index].webhookUrl = webhookUrl;
+            fs.writeFileSync(config.storagePaths.accounts, JSON.stringify(accounts, null, 2));
+            return true;
+        }
+        return false;
+    } catch (error) {
+        logger.error({ error: error.message }, 'Failed to update webhook URL');
+        return false;
+    }
+};
+
 const createAccountRecord = (id) => {
     try {
         let accounts = [];
@@ -195,5 +211,6 @@ module.exports = {
     getSession,
     getQrCode,
     deleteSession,
-    getAccounts
+    getAccounts,
+    updateAccountWebhook
 };

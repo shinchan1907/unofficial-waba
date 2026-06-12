@@ -1,9 +1,13 @@
 const API_BASE = '/api';
 const ADMIN_KEY = 'my-super-secret-api-key';
+let isTyping = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     fetchSystemData();
+    
+    document.addEventListener('focusin', (e) => { if (e.target.tagName === 'INPUT') isTyping = true; });
+    document.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT') isTyping = false; });
 });
 
 function initNavigation() {
@@ -126,6 +130,7 @@ async function deleteAccount(id) {
 }
 
 async function fetchSystemData() {
+    if (isTyping) return;
     try {
         const [accRes, sysRes] = await Promise.all([
             fetch(`${API_BASE}/accounts`, { headers: { 'x-api-key': ADMIN_KEY } }),
@@ -198,6 +203,28 @@ async function testMessage(accountId, apiKey) {
     }
 }
 
+async function saveWebhook(accountId) {
+    const url = document.getElementById(`webhook-${accountId}`).value.trim();
+    try {
+        const response = await fetch(`${API_BASE}/accounts/${accountId}/webhook`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': ADMIN_KEY
+            },
+            body: JSON.stringify({ webhookUrl: url })
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert("Webhook saved!");
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch (e) {
+        alert("Failed to save webhook.");
+    }
+}
+
 function renderAccounts(accounts) {
     const container = document.getElementById('accounts-container');
     container.innerHTML = '';
@@ -223,6 +250,12 @@ function renderAccounts(accounts) {
                     <p>ID: <code>${acc.id}</code></p>
                     <p>Phone: <strong>${acc.number}</strong></p>
                     <p>Key: <code class="blur-text" style="font-size:0.75rem; cursor:pointer;" onclick="navigator.clipboard.writeText('${acc.apiKey}'); alert('API Key copied!');" title="Click to copy">${acc.apiKey}</code></p>
+                    
+                    ${isConnected ? `
+                    <div style="margin-top: 10px; display: flex; gap: 5px;">
+                        <input type="text" id="webhook-${acc.id}" placeholder="Webhook URL (Optional)" value="${acc.webhookUrl || ''}" style="flex:1; padding:4px 8px; font-size:0.75rem; border:1px solid #e2e8f0; border-radius:4px;">
+                        <button onclick="saveWebhook('${acc.id}')" style="padding:4px 8px; font-size:0.75rem; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">Save</button>
+                    </div>` : ''}
                 </div>
                 <div class="account-actions">
                     ${isConnected ? 
