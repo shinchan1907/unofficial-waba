@@ -5,8 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config/config');
 const logger = require('./utils/logger');
-const { dashboardAuth, adminAuth } = require('./middleware/authMiddleware');
+const { dashboardAuth, adminAuth, accountAuth } = require('./middleware/authMiddleware');
 const accountRoutes = require('./routes/accountRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const queueService = require('./services/queueService');
 
 const app = express();
 
@@ -33,6 +35,7 @@ app.get('/', dashboardAuth, (req, res) => {
 
 // API Routes
 app.use('/api/accounts', adminAuth, accountRoutes);
+app.use('/api/messages', accountAuth, messageRoutes);
 
 // Ensure storage directories exist
 const setupStorage = () => {
@@ -65,4 +68,5 @@ app.get('/api/health', (req, res) => {
 app.listen(config.port, async () => {
     logger.info(`Server started on port ${config.port} in ${config.env} mode`);
     await initAllSessions();
+    queueService.initQueue();
 });
