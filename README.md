@@ -1,198 +1,145 @@
 # WhatsApp Automation Server
 
-A production-ready, lightweight, self-hosted WhatsApp API server built with Node.js and `@whiskeysockets/baileys`. Designed specifically to run efficiently on low-resource Virtual Private Servers (VPS) while providing multi-account support, a visual dashboard, and scalable REST APIs.
+A lightweight, production-ready, multi-account WhatsApp API server built with [Baileys](https://github.com/WhiskeySockets/Baileys). 
+Designed as a highly efficient, low-memory alternative to Evolution API, making it perfect for 1GB RAM VPS environments (like AWS Lightsail or DigitalOcean Droplets).
+
+## ✨ Key Features
+- **Multi-Account Support:** Connect and manage dozens of WhatsApp accounts simultaneously.
+- **Visual Dashboard:** Beautiful, password-protected web UI to scan QR codes and monitor account health.
+- **Anti-Ban Message Queue:** Built-in background queue service with automatic delays (1-3s) between messages.
+- **State Persistence:** Automatically restores all sessions upon server reboot without requiring re-scans.
+- **Dual-Layer Security:** Master Admin API Key for management, and isolated auto-generated API Keys for individual WhatsApp accounts.
+- **No Database Required:** Uses robust local JSON file storage (`storage/`) to keep RAM usage under 150MB.
 
 ---
 
-## 🎯 Purposes and Possibilities
+## 🚀 Deployment Guide (Linux VPS)
 
-This system is built as a lightweight alternative to Evolution API or ChatAPI.
-
-**Purposes:**
-- Self-host your own WhatsApp API without paying monthly SaaS fees.
-- Connect multiple WhatsApp accounts (e.g., Marketing, Support, Sales) in one central hub.
-- Integrate WhatsApp messaging directly into your internal CRM, ERP, or web applications.
-
-**Possibilities:**
-- **Automated Alerts:** Send server alerts, OTPs, or transaction receipts to your customers.
-- **Bulk Marketing:** Using the built-in queuing system, safely execute broadcast campaigns with organic delays to avoid bans.
-- **Customer Support Bot:** Forward incoming webhook messages to an AI (like OpenAI) or a human interface to build intelligent auto-responders.
-- **SaaS Foundation:** The architecture is modular. You can easily extend this to offer "WhatsApp API as a Service" to your own clients.
-
----
-
-## 🏗️ Architecture & Flow Diagram
-
-The application uses an event-driven architecture, avoiding heavy databases in favor of fast, memory-efficient JSON file storage.
-
-```mermaid
-graph TD
-    Client[Web Browser / Dashboard] -->|Basic Auth| Express[Express.js API Router]
-    CRM[Your CRM / SaaS] -->|x-api-key| Express
-    
-    Express --> AccCtrl[Account Controller]
-    Express --> MsgCtrl[Message Controller]
-    
-    AccCtrl --> WAManager[WhatsApp Manager]
-    MsgCtrl --> Queue[Queue Service]
-    
-    Queue --> WAManager
-    
-    WAManager <-->|WebSockets| WhatsApp[WhatsApp Servers]
-    
-    WAManager --> Webhook[Webhook Service]
-    Webhook -->|HTTP POST| External[External Endpoints]
-    
-    WAManager -.->|State & Keys| FS[(File System /sessions)]
-```
-
----
-
-## 🚀 VPS Deployment Guide
-
-This guide is optimized for a fresh **Debian 12 / Ubuntu 22.04+** server (e.g., AWS Lightsail 1GB RAM / 2vCPU).
-
-### 1. Initial Server Setup & Dependencies
-Connect to your VPS via SSH and run the following commands to install Node.js 20, Nginx, and PM2.
-
+### 1. Install Node.js & Git
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install curl
-sudo apt install curl -y
-
-# Install Node.js v20
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Install Nginx (For reverse proxy and SSL)
-sudo apt install nginx -y
-
-# Install PM2 globally (Process manager)
-sudo npm install -g pm2
+sudo apt install -y nodejs git
 ```
 
-### 2. Clone and Setup Project
+### 2. Clone & Setup
 ```bash
-# Clone the repository (replace with your git URL if applicable)
-# Or use SFTP/SCP to upload the project folder to /var/www/whatsapp-server
-mkdir -p /var/www
-cd /var/www
-
-# Assuming project is uploaded to /var/www/whatsapp-server
-cd whatsapp-server
-
-# Install project dependencies
-npm install --production
+git clone https://github.com/shinchan1907/unofficial-waba.git
+cd unofficial-waba
+npm install
 ```
 
-### 3. Environment Configuration
-Ensure your `.env` file is configured correctly for production. We recommend running the Node.js app on port `3000` internally, and using Nginx to expose port `80` (HTTP) or `443` (HTTPS) to the outside world.
-
-```bash
-nano .env
-```
-Ensure it contains:
+### 3. Configure Environment
+Edit the `.env` file (or create one):
 ```env
-PORT=3000
-API_KEY=your_secure_api_key_here
+PORT=80
+API_KEY=your-master-admin-secret-key
 NODE_ENV=production
 DASHBOARD_USERNAME=admin
 DASHBOARD_PASSWORD=your_secure_password
 ```
 
-### 4. Start with PM2
-PM2 will keep the app running forever and auto-restart it if the VPS reboots.
-
+### 4. Run in Production (PM2)
 ```bash
-# Start the application
-pm2 start server.js --name "whatsapp-server"
-
-# Save the PM2 list
-pm2 save
-
-# Setup PM2 to start on server boot
-pm2 startup
-# (Run the command that PM2 outputs on the screen)
+sudo npm install -g pm2
+sudo setcap cap_net_bind_service=+ep $(which node) # Allow Node to use Port 80
+sudo pm2 start server.js --name "wa-server"
+sudo pm2 startup
+sudo pm2 save
 ```
-
-### 5. Nginx Reverse Proxy Setup (Highly Recommended)
-Running Node.js directly on port 80 requires root access. It is much safer to run Nginx on port 80 and route traffic to your app running on port 3000.
-
-```bash
-sudo nano /etc/nginx/sites-available/whatsapp
-```
-
-Paste the following configuration (replace `your_server_ip` if you have a domain):
-```nginx
-server {
-    listen 80;
-    server_name your_server_ip;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Enable the configuration and restart Nginx:
-```bash
-sudo ln -s /etc/nginx/sites-available/whatsapp /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default
-sudo systemctl restart nginx
-```
-
-🎉 **Your server is now live!** Open your VPS IP address in a browser to view the Dashboard.
+*Access the dashboard at `http://YOUR_VPS_IP`*
 
 ---
 
-## 💻 Usage Guide
+## 🔐 Authentication
 
-### Using the Dashboard
-1. Open your server IP in a web browser.
-2. Enter the username and password defined in your `.env` file.
-3. Navigate to **Accounts** and click `+ Add New Account`.
-4. Enter a unique ID (e.g., `sales_1`).
-5. Click **Scan QR**. Open the WhatsApp App on your phone > Linked Devices > Link a Device.
-6. The status will automatically change to `Connected`.
+The API uses header-based authentication. Pass the key in the `x-api-key` header.
 
-### Using the APIs
-To communicate with the server from your external apps, you must pass your API key.
+1. **Admin Key:** Set in your `.env` file (`API_KEY`). Required to create or delete accounts.
+2. **Account Key:** Auto-generated when you create an account (looks like `wa_2174f...`). Can be viewed in the Dashboard. Used specifically for sending messages from that account. 
+*(Note: The Admin Key can safely override and act as an Account Key).*
 
-**Authentication:**
-Pass the key in the headers: `x-api-key: your_secure_api_key_here`
+---
 
-#### 1. Get Accounts Status
-```http
-GET /api/accounts
-x-api-key: your_secure_api_key_here
-```
+## 📚 REST API Reference
 
-#### 2. Send a Message
-```http
-POST /api/messages/send
-x-api-key: your_secure_api_key_here
-Content-Type: application/json
+**Base URL:** `http://YOUR_VPS_IP/api`
 
+### 1. Create a New Account
+Initialize a new WhatsApp session.
+- **Method:** `POST /accounts`
+- **Auth:** Admin Key
+- **Body:**
+```json
 {
-  "account": "sales_1",
-  "number": "919999999999",
-  "message": "Hello from the new API server!"
+  "name": "marketing_bot"
+}
+```
+- **Response:** Returns the generated `apiKey` for this account.
+
+### 2. Get QR Code
+Fetch the Base64 QR code image to scan with your phone. Keep calling this every 5 seconds until the status changes to `CONNECTED`.
+- **Method:** `GET /accounts/marketing_bot/qr`
+- **Auth:** Admin Key
+- **Response:**
+```json
+{
+  "success": true,
+  "qr": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
 }
 ```
 
-#### 3. Receiving Webhooks (Future Feature)
-When a message is received on WhatsApp, the server will `POST` the data to your configured CRM webhook endpoint in real-time.
+### 3. Get Account Status
+- **Method:** `GET /accounts/marketing_bot/status`
+- **Auth:** Admin Key OR Account Key
+- **Response:**
+```json
+{
+  "status": "CONNECTED",
+  "number": "919876543210"
+}
+```
+
+### 4. Logout & Delete Account
+Logs the phone out of WhatsApp web and deletes the session files.
+- **Method:** `POST /accounts/marketing_bot/logout`
+- **Auth:** Admin Key
 
 ---
 
-## ⚙️ Performance Tuning (For 1GB RAM)
-- Do not run heavy build steps (`npm run build`) on the server.
-- The app uses `pino` for low-overhead logging.
-- Session credentials are saved incrementally. Over months of use, if `sessions/` directory grows too large, clearing disconnected sessions will free up inodes/space.
+## ✉️ Messaging API
+
+### Send a Text Message
+Adds a message to the internal background queue. The server will automatically process it, format the phone number, and send it with an anti-ban delay.
+- **Method:** `POST /messages/send`
+- **Auth:** Account Key (e.g., `wa_...`) or Admin Key
+- **Headers:** 
+  - `Content-Type: application/json`
+  - `x-api-key: <YOUR_ACCOUNT_KEY>`
+- **Body:**
+```json
+{
+  "account": "marketing_bot",
+  "number": "919876543210",
+  "message": "Hello from the new WhatsApp Server API!"
+}
+```
+*Note: The `number` should include the country code but NO plus sign or spaces.*
+- **Response:**
+```json
+{
+  "success": true,
+  "message": "Message added to queue",
+  "msgId": "msg_1718181234567"
+}
+```
+
+---
+
+## 🛠 Directory Structure
+- `config/` - Core configuration and path management.
+- `controllers/` - API route logic.
+- `dashboard/` - HTML/Vanilla JS frontend interface.
+- `middleware/` - Security layers (`adminAuth`, `accountAuth`, Basic Auth).
+- `routes/` - Express route definitions.
+- `services/` - Core logic (`whatsappManager.js` for Baileys, `queueService.js` for queueing).
+- `storage/` - Auto-generated JSON databases and session files (Ignored by Git).
