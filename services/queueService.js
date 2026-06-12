@@ -32,13 +32,14 @@ const saveQueue = () => {
     }
 };
 
-const addToQueue = (accountId, to, message) => {
+const addToQueue = (accountId, to, message, media = null) => {
     const msgId = 'msg_' + Date.now() + Math.floor(Math.random() * 1000);
     messageQueue.push({
         id: msgId,
         accountId,
-        to: to.replace(/[^0-9]/g, ''), // Strip non-numeric characters from phone number
+        to,
         message,
+        media,
         status: 'PENDING',
         createdAt: new Date().toISOString()
     });
@@ -74,13 +75,27 @@ const processQueue = async () => {
             return;
         }
 
-        // Format JID correctly for Baileys
+        // Send the message
         const jid = `${task.to}@s.whatsapp.net`;
-
-        logger.info({ msgId: task.id, to: task.to }, 'Processing queued message');
-
-        // Send message via Baileys
-        await socket.sendMessage(jid, { text: task.message });
+        
+        let msgPayload = { text: task.message };
+        
+        if (task.media) {
+            if (task.media.type === 'image') {
+                msgPayload = { image: { url: task.media.url }, caption: task.message };
+            } else if (task.media.type === 'video') {
+                msgPayload = { video: { url: task.media.url }, caption: task.message };
+            } else if (task.media.type === 'document') {
+                msgPayload = { 
+                    document: { url: task.media.url }, 
+                    caption: task.message,
+                    fileName: task.media.fileName || 'document',
+                    mimetype: task.media.mimetype || 'application/octet-stream'
+                };
+            }
+        }
+        
+        await socket.sendMessage(jid, msgPayload);
         
         // Remove from queue upon success to keep file lightweight
         messageQueue.splice(index, 1);

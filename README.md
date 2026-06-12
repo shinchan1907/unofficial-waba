@@ -151,12 +151,12 @@ curl -X POST http://YOUR_VPS_IP/api/accounts/marketing_bot/logout \
 
 ## ✉️ Messaging API
 
-### Send a Text Message
+### Send a Message (Text or Media)
 This adds a message to the internal background queue. The server will process the queue sequentially to prevent WhatsApp from banning the account for spamming.
 - **Method:** `POST /messages/send`
 - **Auth Header:** `x-api-key: <ACCOUNT_KEY>` OR `<ADMIN_KEY>`
 
-**cURL Example:**
+**cURL Example (Standard Text):**
 ```bash
 curl -X POST http://YOUR_VPS_IP/api/messages/send \
   -H "x-api-key: wa_2174fbd23197d4129395d801c9afe7a" \
@@ -167,6 +167,23 @@ curl -X POST http://YOUR_VPS_IP/api/messages/send \
     "message": "Hello from the new WhatsApp Server API! This is a test message."
   }'
 ```
+
+**cURL Example (Image / Video / Document with Caption):**
+```bash
+curl -X POST http://YOUR_VPS_IP/api/messages/send \
+  -H "x-api-key: wa_2174fbd23197d4129395d801c9afe7a" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account": "marketing_bot",
+    "number": "919876543210",
+    "message": "Check out our new product!",
+    "media": {
+      "type": "image", 
+      "url": "https://www.example.com/photo.jpg"
+    }
+  }'
+```
+*(For videos, change `type` to `"video"`. For documents, use `"document"` and optionally add `"fileName": "report.pdf"`).*
 
 *Note: The `number` should include the country code but NO plus sign or spaces.*
 

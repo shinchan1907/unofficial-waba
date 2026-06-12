@@ -2,10 +2,14 @@ const queueService = require('../services/queueService');
 const whatsappManager = require('../services/whatsappManager');
 
 const sendMessage = async (req, res) => {
-    const { account, number, message } = req.body;
+    const { account, number, message, media } = req.body;
 
-    if (!account || !number || !message) {
-        return res.status(400).json({ success: false, error: 'Missing required parameters: account, number, message' });
+    if (!account || !number) {
+        return res.status(400).json({ success: false, error: 'Account and number are required' });
+    }
+
+    if (!message && !media) {
+        return res.status(400).json({ success: false, error: 'Either message or media is required' });
     }
 
     try {
