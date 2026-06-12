@@ -32,7 +32,13 @@ const createAccountRecord = (id) => {
         if (fs.existsSync(config.storagePaths.accounts)) {
             accounts = JSON.parse(fs.readFileSync(config.storagePaths.accounts, 'utf8'));
         }
-        if (accounts.find(a => a.id === id)) return null;
+        
+        const existing = accounts.find(a => a.id === id);
+        if (existing) {
+            if (existing.status !== 'LOGGED_OUT') return null;
+            // Remove the dead session from array so we can recreate it
+            accounts = accounts.filter(a => a.id !== id);
+        }
         
         const apiKey = 'wa_' + crypto.randomBytes(16).toString('hex');
         accounts.push({ 
@@ -113,6 +119,14 @@ const initSession = async (accountId) => {
                 if (fs.existsSync(sessionDir)) {
                     fs.rmSync(sessionDir, { recursive: true, force: true });
                 }
+                
+                // Physically remove from DB so it can be cleanly recreated
+                try {
+                    let accounts = JSON.parse(fs.readFileSync(config.storagePaths.accounts, 'utf8'));
+                    accounts = accounts.filter(a => a.id !== accountId);
+                    fs.writeFileSync(config.storagePaths.accounts, JSON.stringify(accounts, null, 2));
+                } catch (e) {}
+                
                 logger.info({ accountId }, 'Session logged out and deleted');
             }
         }
