@@ -29,9 +29,15 @@ function initializeCRM() {
   
   // Create Formatted tab if not exists
   let crmSheet = ss.getSheetByName(CRM_SHEET);
+  const headers = ['Date', 'Form Name', 'Platform', 'Name', 'Phone', 'Email', 'Qualification', 'Occupation', 'WA Status', 'Message ID', 'Last Updated'];
+  
   if (!crmSheet) {
     crmSheet = ss.insertSheet(CRM_SHEET);
-    const headers = ['Date', 'Form Name', 'Platform', 'Name', 'Phone', 'Email', 'Qualification', 'Occupation', 'WA Status', 'Message ID', 'Last Updated'];
+  }
+  
+  // Ensure headers exist
+  const firstRow = crmSheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  if (!firstRow[0] || firstRow[0] === '') {
     crmSheet.getRange(1, 1, 1, headers.length).setValues([headers])
       .setFontWeight('bold')
       .setBackground('#f3f4f6');
@@ -59,7 +65,7 @@ function initializeCRM() {
   return "CRM Initialized! Formatted tab created and background triggers actvated.";
 }
 
-function sendWhatsAppMessage(number, message) {
+function sendWhatsAppMessage(number, message, mediaUrl = null) {
   const props = getSettings();
   if (!props.apiUrl || !props.apiKey || !props.accountId) return null;
 
@@ -68,6 +74,16 @@ function sendWhatsAppMessage(number, message) {
     number: String(number).replace(/[^0-9]/g, ''),
     message: message
   };
+
+  if (mediaUrl && mediaUrl.trim() !== '') {
+    const cleanUrl = mediaUrl.trim();
+    const ext = cleanUrl.split('.').pop().toLowerCase();
+    const isVideo = ext.includes('mp4') || ext.includes('mov') || ext.includes('avi');
+    payload.media = {
+      type: isVideo ? 'video' : 'image',
+      url: cleanUrl
+    };
+  }
 
   const options = {
     method: 'post',
@@ -131,7 +147,7 @@ function processNewLeads() {
       const personalizedMsg = template.replace(/{name}/gi, name || "there");
       
       // Send WA Message
-      const msgId = sendWhatsAppMessage(cleanPhone, personalizedMsg);
+      const msgId = sendWhatsAppMessage(cleanPhone, personalizedMsg, props.initialMediaUrl);
       const status = msgId ? 'SENT_INITIAL' : 'FAILED';
       
       // Append to Formatted Tab
@@ -157,11 +173,13 @@ function processNewLeads() {
 }
 
 function checkFollowUps() {
+  const props = getSettings();
+  if (props.enableFollowUps !== 'true') return; // Exit if disabled
+
   const crmSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CRM_SHEET);
   if (!crmSheet) return;
 
   const data = crmSheet.getDataRange().getValues();
-  const props = getSettings();
   const template = props.followupTemplate;
   if (!template) return;
 
@@ -179,7 +197,7 @@ function checkFollowUps() {
 
       if (hoursDiff >= 3) {
         const personalizedMsg = template.replace(/{name}/gi, name || "there");
-        const msgId = sendWhatsAppMessage(phone, personalizedMsg);
+        const msgId = sendWhatsAppMessage(phone, personalizedMsg, props.followupMediaUrl);
         
         if (msgId) {
           crmSheet.getRange(i + 1, 9).setValue('FOLLOWUP_SENT');

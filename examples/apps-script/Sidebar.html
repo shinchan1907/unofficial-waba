@@ -49,11 +49,16 @@
       <label>Initial Message Template</label>
       <div style="font-size:11px; color:#666; margin-bottom:4px;">Use {name} to personalize with the lead's name.</div>
       <textarea id="initialTemplate" placeholder="Hi {name}, thanks for reaching out!"></textarea>
+      <input type="text" id="initialMediaUrl" placeholder="Optional: Image/Video URL" style="margin-top: 5px;">
     </div>
 
     <div class="form-group">
-      <label>Follow-up Message (After 3 hours)</label>
-      <textarea id="followupTemplate" placeholder="Hi {name}, just checking if you saw my last message!"></textarea>
+      <label style="display:flex; align-items:center; gap:5px;">
+        <input type="checkbox" id="enableFollowUps" style="width:auto; margin:0;"> Enable 3-Hour Follow-ups
+      </label>
+      <div style="font-size:11px; color:#666; margin-bottom:4px;">Will only trigger if message is NOT read or replied to.</div>
+      <textarea id="followupTemplate" placeholder="Hi {name}, just checking if you saw my last message!" style="margin-top: 5px;"></textarea>
+      <input type="text" id="followupMediaUrl" placeholder="Optional: Image/Video URL" style="margin-top: 5px;">
     </div>
 
     <div class="form-group">
@@ -72,7 +77,10 @@
           document.getElementById('apiKey').value = settings.apiKey || '';
           document.getElementById('accountId').value = settings.accountId || '';
           document.getElementById('initialTemplate').value = settings.initialTemplate || '';
+          document.getElementById('initialMediaUrl').value = settings.initialMediaUrl || '';
+          document.getElementById('enableFollowUps').checked = settings.enableFollowUps === 'true';
           document.getElementById('followupTemplate').value = settings.followupTemplate || '';
+          document.getElementById('followupMediaUrl').value = settings.followupMediaUrl || '';
           document.getElementById('offHoursReply').value = settings.offHoursReply || '';
         }
       }).getSettings();
@@ -84,7 +92,10 @@
           apiKey: document.getElementById('apiKey').value,
           accountId: document.getElementById('accountId').value,
           initialTemplate: document.getElementById('initialTemplate').value,
+          initialMediaUrl: document.getElementById('initialMediaUrl').value,
+          enableFollowUps: document.getElementById('enableFollowUps').checked ? 'true' : 'false',
           followupTemplate: document.getElementById('followupTemplate').value,
+          followupMediaUrl: document.getElementById('followupMediaUrl').value,
           offHoursReply: document.getElementById('offHoursReply').value
         };
         
