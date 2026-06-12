@@ -7,24 +7,24 @@ Designed as a highly efficient, low-memory alternative to Evolution API, making 
 
 ```mermaid
 graph TD
-    Client[Client App / Postman] -->|POST /messages/send| API[Express REST API]
-    Admin[Browser] -->|Basic Auth| Dashboard[Web Dashboard]
+    Client[Client App / Postman] -->|"POST /messages/send"| API[Express REST API]
+    Admin[Browser] -->|"Basic Auth"| Dashboard[Web Dashboard]
     
-    API -->|Validates Account Key| Auth[Auth Middleware]
+    API -->|"Validates Account Key"| Auth[Auth Middleware]
     
     Auth --> QueueService[Message Queue Service]
     Auth --> AccountController[Account Controller]
     
-    QueueService -->|Saves Pending Msgs| QueueDB[(queue.json)]
-    QueueService -->|Pulls 1 by 1| Processor[Background Queue Processor]
+    QueueService -->|"Saves Pending Msgs"| QueueDB[(queue.json)]
+    QueueService -->|"Pulls 1 by 1"| Processor[Background Queue Processor]
     
-    AccountController -->|Manage Sessions| WAManager[WhatsApp Core Manager]
-    WAManager -->|Updates State| AccountsDB[(accounts.json)]
-    WAManager -->|Spins up instances| Baileys[Baileys Sockets in RAM]
+    AccountController -->|"Manage Sessions"| WAManager[WhatsApp Core Manager]
+    WAManager -->|"Updates State"| AccountsDB[(accounts.json)]
+    WAManager -->|"Spins up instances"| Baileys[Baileys Sockets in RAM]
     
-    Processor -->|Dispatches Msg (1-3s delay)| Baileys
-    Baileys <-->|WebSockets| WA_Servers[WhatsApp Core Servers]
-    Baileys -->|Persists Auth Keys| Storage[(storage/sessions/)]
+    Processor -->|"Dispatches Msg"| Baileys
+    Baileys <-->|"WebSockets"| WA_Servers[WhatsApp Core Servers]
+    Baileys -->|"Persists Auth Keys"| Storage[(storage/sessions/)]
 ```
 
 ## ✨ Key Features
@@ -87,21 +87,24 @@ The API uses header-based authentication. Pass the key in the `x-api-key` header
 
 ---
 
-## 📚 REST API Reference
+## 📚 Comprehensive REST API Reference
 
 **Base URL:** `http://YOUR_VPS_IP/api`
 
 ### 1. Create a New Account
 Initialize a new WhatsApp session.
 - **Method:** `POST /accounts`
-- **Auth:** Admin Key
-- **Body:**
-```json
-{
-  "name": "marketing_bot"
-}
+- **Auth Header:** `x-api-key: <ADMIN_KEY>`
+
+**cURL Example:**
+```bash
+curl -X POST http://YOUR_VPS_IP/api/accounts \
+  -H "x-api-key: your-master-admin-secret-key" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "marketing_bot"}'
 ```
-- **Response:** 
+
+**Response:**
 ```json
 {
   "success": true,
@@ -113,32 +116,36 @@ Initialize a new WhatsApp session.
 
 ### 2. Get QR Code
 Fetch the Base64 QR code image to scan with your phone. Keep polling this endpoint every 5 seconds until the status changes to `CONNECTED`.
-- **Method:** `GET /accounts/marketing_bot/qr`
-- **Auth:** Admin Key
-- **Response:**
-```json
-{
-  "success": true,
-  "qr": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
-}
+- **Method:** `GET /accounts/:id/qr`
+- **Auth Header:** `x-api-key: <ADMIN_KEY>`
+
+**cURL Example:**
+```bash
+curl -X GET http://YOUR_VPS_IP/api/accounts/marketing_bot/qr \
+  -H "x-api-key: your-master-admin-secret-key"
 ```
 
 ### 3. Get Account Status
 Check if a phone is online, offline, or awaiting QR scan.
-- **Method:** `GET /accounts/marketing_bot/status`
-- **Auth:** Admin Key OR Account Key
-- **Response:**
-```json
-{
-  "status": "CONNECTED",
-  "number": "919876543210"
-}
+- **Method:** `GET /accounts/:id/status`
+- **Auth Header:** `x-api-key: <ADMIN_KEY>` OR `<ACCOUNT_KEY>`
+
+**cURL Example:**
+```bash
+curl -X GET http://YOUR_VPS_IP/api/accounts/marketing_bot/status \
+  -H "x-api-key: your-master-admin-secret-key"
 ```
 
 ### 4. Logout & Delete Account
 Logs the phone out of WhatsApp web completely and deletes all session files from the server storage.
-- **Method:** `POST /accounts/marketing_bot/logout`
-- **Auth:** Admin Key
+- **Method:** `POST /accounts/:id/logout`
+- **Auth Header:** `x-api-key: <ADMIN_KEY>`
+
+**cURL Example:**
+```bash
+curl -X POST http://YOUR_VPS_IP/api/accounts/marketing_bot/logout \
+  -H "x-api-key: your-master-admin-secret-key"
+```
 
 ---
 
@@ -147,20 +154,23 @@ Logs the phone out of WhatsApp web completely and deletes all session files from
 ### Send a Text Message
 This adds a message to the internal background queue. The server will process the queue sequentially to prevent WhatsApp from banning the account for spamming.
 - **Method:** `POST /messages/send`
-- **Auth:** Account Key (e.g., `wa_...`) or Admin Key
-- **Headers:** 
-  - `Content-Type: application/json`
-  - `x-api-key: <YOUR_ACCOUNT_KEY>`
-- **Body:**
-```json
-{
-  "account": "marketing_bot",
-  "number": "919876543210",
-  "message": "Hello from the new WhatsApp Server API!"
-}
+- **Auth Header:** `x-api-key: <ACCOUNT_KEY>` OR `<ADMIN_KEY>`
+
+**cURL Example:**
+```bash
+curl -X POST http://YOUR_VPS_IP/api/messages/send \
+  -H "x-api-key: wa_2174fbd23197d4129395d801c9afe7a" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account": "marketing_bot",
+    "number": "919876543210",
+    "message": "Hello from the new WhatsApp Server API! This is a test message."
+  }'
 ```
+
 *Note: The `number` should include the country code but NO plus sign or spaces.*
-- **Response:**
+
+**Response:**
 ```json
 {
   "success": true,
