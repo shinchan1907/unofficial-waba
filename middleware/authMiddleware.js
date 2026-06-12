@@ -2,7 +2,9 @@ const fs = require('fs');
 const config = require('../config/config');
 
 const adminAuth = (req, res, next) => {
-    const apiKey = req.headers['x-api-key'] || req.query.api_key;
+    const rawKey = req.headers['x-api-key'] || req.query.api_key;
+    const apiKey = rawKey ? rawKey.trim() : null;
+    
     if (!apiKey || apiKey !== config.apiKey) {
         return res.status(401).json({ success: false, error: 'Unauthorized: Invalid or missing Admin API Key' });
     }
@@ -10,7 +12,9 @@ const adminAuth = (req, res, next) => {
 };
 
 const accountAuth = (req, res, next) => {
-    const apiKey = req.headers['x-api-key'] || req.query.api_key;
+    const rawKey = req.headers['x-api-key'] || req.query.api_key;
+    const apiKey = rawKey ? rawKey.trim() : null;
+    
     if (!apiKey) {
         return res.status(401).json({ success: false, error: 'Unauthorized: Missing API Key' });
     }
@@ -29,13 +33,25 @@ const accountAuth = (req, res, next) => {
         if (fs.existsSync(config.storagePaths.accounts)) {
             const accounts = JSON.parse(fs.readFileSync(config.storagePaths.accounts, 'utf8'));
             const account = accounts.find(a => a.id === targetAccount);
-            if (account && account.apiKey === apiKey) {
-                return next();
+            
+            if (!account) {
+                return res.status(401).json({ success: false, error: `Unauthorized: Account '${targetAccount}' not found in storage` });
             }
+            
+            if (account.apiKey === apiKey) {
+                return next();
+            } else {
+                return res.status(401).json({ 
+                    success: false, 
+                    error: 'Unauthorized: API Key mismatch'
+                });
+            }
+        } else {
+            return res.status(401).json({ success: false, error: 'Unauthorized: accounts database not found' });
         }
-    } catch (e) {}
-
-    return res.status(401).json({ success: false, error: 'Unauthorized: Invalid Account API Key' });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: 'Internal Server Error reading accounts' });
+    }
 };
 
 const dashboardAuth = (req, res, next) => {
