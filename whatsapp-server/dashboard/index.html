@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Automation Server</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <h2>WA Server</h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#overview" class="active" id="nav-overview">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Overview
+                </a>
+                <a href="#accounts" id="nav-accounts">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Accounts
+                </a>
+                <a href="#api-docs" id="nav-api-docs">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                    API Docs
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <p>Version 1.0.0</p>
+                <p>&copy; 2026 WA Server</p>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <header class="topbar">
+                <h1 id="page-title">Overview</h1>
+                <div class="stats-pills">
+                    <div class="pill"><span class="dot green"></span> <span id="online-count">0</span> Online</div>
+                    <div class="pill"><span class="dot red"></span> <span id="offline-count">0</span> Offline</div>
+                </div>
+            </header>
+
+            <!-- OVERVIEW VIEW -->
+            <div id="view-overview" class="view active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Accounts</h3>
+                        <p class="stat-value" id="stat-total">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Messages Sent</h3>
+                        <p class="stat-value" id="stat-sent">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Messages Received</h3>
+                        <p class="stat-value" id="stat-received">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Server Uptime</h3>
+                        <p class="stat-value" id="stat-uptime">0h 0m</p>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Recent Logs</h3>
+                <div class="logs-card">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Account</th>
+                                <th>Event</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-body">
+                            <tr><td colspan="4" class="text-center">No logs available</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ACCOUNTS VIEW -->
+            <div id="view-accounts" class="view">
+                <div class="actions-bar">
+                    <p class="text-muted">Manage your connected WhatsApp accounts.</p>
+                    <button class="btn btn-primary" onclick="showAddAccountModal()">+ Add New Account</button>
+                </div>
+                <div class="accounts-grid" id="accounts-container">
+                    <!-- Cards injected via JS -->
+                </div>
+            </div>
+
+            <!-- API DOCS VIEW -->
+            <div id="view-api-docs" class="view">
+                <div class="docs-container">
+                    <h2>API Documentation</h2>
+                    <p>All API endpoints require authentication via the <code>x-api-key</code> header or <code>?api_key=</code> query parameter.</p>
+                    
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/accounts</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>Create a new WhatsApp account session.</p>
+                            <h4>Body (JSON)</h4>
+                            <pre><code>{
+  "name": "marketing"
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/accounts</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>List all WhatsApp accounts and their connection status.</p>
+                        </div>
+                    </div>
+
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/accounts/:id/qr</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>Get the QR code for a specific account. Returns base64 image data or raw image.</p>
+                        </div>
+                    </div>
+
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/accounts/:id/status</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>Get connection status of a specific account.</p>
+                            <h4>Response</h4>
+                            <pre><code>{
+  "status": "CONNECTED",
+  "number": "919999999999"
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/messages/send</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>Send a text message from a specific account. Messages are automatically queued.</p>
+                            <h4>Body (JSON)</h4>
+                            <pre><code>{
+  "account": "marketing",
+  "number": "919999999999",
+  "message": "Hello customer"
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/accounts/:id/logout</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>Logout and delete session for a specific account.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="addAccountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Account</h2>
+                <button class="icon-btn" onclick="closeModal('addAccountModal')">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Account ID (No spaces, lowercase)</label>
+                <input type="text" id="newAccountId" placeholder="e.g. marketing">
+                <p class="help-text">This will be used as the unique identifier for the API.</p>
+            </div>
+            <div class="form-actions">
+                <button class="btn" onclick="closeModal('addAccountModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createAccount()">Create Account</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="qrModal" class="modal">
+        <div class="modal-content text-center">
+            <div class="modal-header">
+                <h2>Scan QR Code</h2>
+                <button class="icon-btn" onclick="closeModal('qrModal')">✕</button>
+            </div>
+            <p class="text-muted" style="margin-bottom: 20px;">Open WhatsApp on your phone and link a device.</p>
+            <div id="qr-container">
+                <div class="loader"></div>
+            </div>
+            <p id="qr-status" style="margin-top: 15px; font-weight: 500;">Waiting for QR...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

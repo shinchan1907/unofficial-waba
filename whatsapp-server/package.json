@@ -1,0 +1,21 @@
+{
+  "name": "whatsapp-server",
+  "version": "1.0.0",
+  "description": "Self-hosted WhatsApp automation server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "pino": "^9.5.0",
+    "pino-pretty": "^13.0.0",
+    "qrcode": "^1.5.4"
+  }
+}
