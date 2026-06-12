@@ -156,13 +156,24 @@
                             <span class="path">/api/messages/send</span>
                         </div>
                         <div class="endpoint-body">
-                            <p>Send a text message from a specific account. Messages are automatically queued.</p>
-                            <h4>Body (JSON)</h4>
+                            <p>Send a text or media message from a specific account. Messages are automatically queued.</p>
+                            <h4>Body (JSON) - Text Message</h4>
                             <pre><code>{
   "account": "marketing",
   "number": "919999999999",
   "message": "Hello customer"
 }</code></pre>
+                            <h4 style="margin-top: 15px;">Body (JSON) - Media Message</h4>
+                            <pre><code>{
+  "account": "marketing",
+  "number": "919999999999",
+  "message": "Caption goes here",
+  "media": {
+    "type": "image", 
+    "url": "https://example.com/photo.jpg"
+  }
+}</code></pre>
+                            <p class="text-muted" style="margin-top: 5px; font-size: 0.8rem;">* `type` can be `image`, `video`, or `document`.</p>
                         </div>
                     </div>
 
@@ -172,9 +183,33 @@
                             <span class="path">/api/accounts/:id/logout</span>
                         </div>
                         <div class="endpoint-body">
-                            <p>Logout and delete session for a specific account.</p>
+                            <p>Logout and completely delete a session for a specific account.</p>
                         </div>
                     </div>
+
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method put" style="background-color: #f59e0b; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PUT</span>
+                            <span class="path">/api/accounts/:id/webhook</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p>Configure a custom webhook URL for a specific account to receive incoming messages.</p>
+                            <h4>Body (JSON)</h4>
+                            <pre><code>{
+  "webhookUrl": "https://hook.eu1.make.com/your-id"
+}</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-top: 30px; margin-bottom: 15px;">Incoming Webhook Format</h3>
+                    <p>If a webhook is configured, the server will POST incoming messages in this format:</p>
+                    <pre><code>{
+  "account": "marketing_bot",
+  "sender": "919876543210",
+  "text": "Hello, I need help with my order!",
+  "messageType": "conversation",
+  "timestamp": "2024-06-12T10:30:00.000Z"
+}</code></pre>
                 </div>
             </div>
             
