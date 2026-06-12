@@ -1,3 +1,6 @@
+const API_BASE = '/api';
+const ADMIN_KEY = 'my-super-secret-api-key';
+
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     fetchSystemData();
