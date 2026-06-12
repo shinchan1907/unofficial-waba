@@ -3,17 +3,41 @@
 A lightweight, production-ready, multi-account WhatsApp API server built with [Baileys](https://github.com/WhiskeySockets/Baileys). 
 Designed as a highly efficient, low-memory alternative to Evolution API, making it perfect for 1GB RAM VPS environments (like AWS Lightsail or DigitalOcean Droplets).
 
+## 🏛️ System Architecture & Data Flow
+
+```mermaid
+graph TD
+    Client[Client App / Postman] -->|POST /messages/send| API[Express REST API]
+    Admin[Browser] -->|Basic Auth| Dashboard[Web Dashboard]
+    
+    API -->|Validates Account Key| Auth[Auth Middleware]
+    
+    Auth --> QueueService[Message Queue Service]
+    Auth --> AccountController[Account Controller]
+    
+    QueueService -->|Saves Pending Msgs| QueueDB[(queue.json)]
+    QueueService -->|Pulls 1 by 1| Processor[Background Queue Processor]
+    
+    AccountController -->|Manage Sessions| WAManager[WhatsApp Core Manager]
+    WAManager -->|Updates State| AccountsDB[(accounts.json)]
+    WAManager -->|Spins up instances| Baileys[Baileys Sockets in RAM]
+    
+    Processor -->|Dispatches Msg (1-3s delay)| Baileys
+    Baileys <-->|WebSockets| WA_Servers[WhatsApp Core Servers]
+    Baileys -->|Persists Auth Keys| Storage[(storage/sessions/)]
+```
+
 ## ✨ Key Features
-- **Multi-Account Support:** Connect and manage dozens of WhatsApp accounts simultaneously.
+- **Multi-Account Support:** Connect and manage dozens of WhatsApp accounts simultaneously via REST APIs.
 - **Visual Dashboard:** Beautiful, password-protected web UI to scan QR codes and monitor account health.
-- **Anti-Ban Message Queue:** Built-in background queue service with automatic delays (1-3s) between messages.
-- **State Persistence:** Automatically restores all sessions upon server reboot without requiring re-scans.
+- **Anti-Ban Message Queue:** Built-in background queue service with automatic random delays (1-3s) between messages to mimic human behavior.
+- **State Persistence:** Automatically restores all disconnected or stopped sessions upon server reboot without requiring re-scans.
 - **Dual-Layer Security:** Master Admin API Key for management, and isolated auto-generated API Keys for individual WhatsApp accounts.
-- **No Database Required:** Uses robust local JSON file storage (`storage/`) to keep RAM usage under 150MB.
+- **No Heavy Database:** Uses robust local JSON file storage (`storage/`) avoiding the massive RAM footprint of MongoDB/PostgreSQL.
 
 ---
 
-## 🚀 Deployment Guide (Linux VPS)
+## 🚀 Deployment Guide (Production VPS)
 
 ### 1. Install Node.js & Git
 ```bash
@@ -29,7 +53,7 @@ npm install
 ```
 
 ### 3. Configure Environment
-Edit the `.env` file (or create one):
+Edit the `.env` file in the root folder:
 ```env
 PORT=80
 API_KEY=your-master-admin-secret-key
@@ -38,10 +62,14 @@ DASHBOARD_USERNAME=admin
 DASHBOARD_PASSWORD=your_secure_password
 ```
 
-### 4. Run in Production (PM2)
+### 4. Run as a Background Service (PM2)
+Using PM2 ensures the app runs 24/7 and restarts automatically if it crashes or if the server reboots.
 ```bash
 sudo npm install -g pm2
-sudo setcap cap_net_bind_service=+ep $(which node) # Allow Node to use Port 80
+# Allow Node to bind to privileged Port 80 without being root user
+sudo setcap cap_net_bind_service=+ep $(which node) 
+
+# Start and save the process
 sudo pm2 start server.js --name "wa-server"
 sudo pm2 startup
 sudo pm2 save
@@ -50,13 +78,12 @@ sudo pm2 save
 
 ---
 
-## 🔐 Authentication
+## 🔐 Authentication System
 
-The API uses header-based authentication. Pass the key in the `x-api-key` header.
+The API uses header-based authentication. Pass the key in the `x-api-key` header for all requests.
 
-1. **Admin Key:** Set in your `.env` file (`API_KEY`). Required to create or delete accounts.
-2. **Account Key:** Auto-generated when you create an account (looks like `wa_2174f...`). Can be viewed in the Dashboard. Used specifically for sending messages from that account. 
-*(Note: The Admin Key can safely override and act as an Account Key).*
+1. **Admin Key (`API_KEY` in `.env`):** The master key. Required to access global routes like creating or deleting accounts.
+2. **Account Key (`wa_...`):** Auto-generated when you link an account. This key is isolated; it can ONLY be used to send messages from the specific account it was generated for.
 
 ---
 
@@ -74,10 +101,18 @@ Initialize a new WhatsApp session.
   "name": "marketing_bot"
 }
 ```
-- **Response:** Returns the generated `apiKey` for this account.
+- **Response:** 
+```json
+{
+  "success": true,
+  "accountId": "marketing_bot",
+  "apiKey": "wa_2174fbd23197d4129...",
+  "message": "Account creation initiated. Fetch QR code next."
+}
+```
 
 ### 2. Get QR Code
-Fetch the Base64 QR code image to scan with your phone. Keep calling this every 5 seconds until the status changes to `CONNECTED`.
+Fetch the Base64 QR code image to scan with your phone. Keep polling this endpoint every 5 seconds until the status changes to `CONNECTED`.
 - **Method:** `GET /accounts/marketing_bot/qr`
 - **Auth:** Admin Key
 - **Response:**
@@ -89,6 +124,7 @@ Fetch the Base64 QR code image to scan with your phone. Keep calling this every 
 ```
 
 ### 3. Get Account Status
+Check if a phone is online, offline, or awaiting QR scan.
 - **Method:** `GET /accounts/marketing_bot/status`
 - **Auth:** Admin Key OR Account Key
 - **Response:**
@@ -100,7 +136,7 @@ Fetch the Base64 QR code image to scan with your phone. Keep calling this every 
 ```
 
 ### 4. Logout & Delete Account
-Logs the phone out of WhatsApp web and deletes the session files.
+Logs the phone out of WhatsApp web completely and deletes all session files from the server storage.
 - **Method:** `POST /accounts/marketing_bot/logout`
 - **Auth:** Admin Key
 
@@ -109,7 +145,7 @@ Logs the phone out of WhatsApp web and deletes the session files.
 ## ✉️ Messaging API
 
 ### Send a Text Message
-Adds a message to the internal background queue. The server will automatically process it, format the phone number, and send it with an anti-ban delay.
+This adds a message to the internal background queue. The server will process the queue sequentially to prevent WhatsApp from banning the account for spamming.
 - **Method:** `POST /messages/send`
 - **Auth:** Account Key (e.g., `wa_...`) or Admin Key
 - **Headers:** 
@@ -136,10 +172,10 @@ Adds a message to the internal background queue. The server will automatically p
 ---
 
 ## 🛠 Directory Structure
-- `config/` - Core configuration and path management.
-- `controllers/` - API route logic.
-- `dashboard/` - HTML/Vanilla JS frontend interface.
+- `config/` - Core configuration, environment variables, and storage path mapping.
+- `controllers/` - Handles the logic for incoming API requests.
+- `dashboard/` - HTML/Vanilla JS frontend interface for browser-based management.
 - `middleware/` - Security layers (`adminAuth`, `accountAuth`, Basic Auth).
 - `routes/` - Express route definitions.
-- `services/` - Core logic (`whatsappManager.js` for Baileys, `queueService.js` for queueing).
-- `storage/` - Auto-generated JSON databases and session files (Ignored by Git).
+- `services/` - Core daemon logic (`whatsappManager.js` handles Baileys WebSocket lifecycle, `queueService.js` handles the sequential dispatching of messages).
+- `storage/` - Auto-generated JSON databases and persistent Baileys session files (Ignored by Git to prevent leakages).
