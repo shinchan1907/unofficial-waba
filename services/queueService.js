@@ -3,6 +3,7 @@ const path = require('path');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 const whatsappManager = require('./whatsappManager');
+const logService = require('./logService');
 
 let messageQueue = [];
 let isProcessing = false;
@@ -42,6 +43,8 @@ const addToQueue = (accountId, to, message) => {
         createdAt: new Date().toISOString()
     });
     saveQueue();
+    
+    logService.writeLog(accountId, 'MESSAGE_QUEUED', `To: ${to}`);
     return msgId;
 };
 
@@ -66,6 +69,7 @@ const processQueue = async () => {
             task.status = 'FAILED';
             task.error = 'Account disconnected';
             saveQueue();
+            logService.writeLog(task.accountId, 'MESSAGE_FAILED', `To: ${task.to} (Disconnected)`);
             isProcessing = false;
             return;
         }
@@ -83,12 +87,17 @@ const processQueue = async () => {
         saveQueue();
         
         logger.info({ msgId: task.id }, 'Message sent successfully');
+        logService.writeLog(task.accountId, 'MESSAGE_SENT', `To: ${task.to}`);
 
         // Anti-ban delay: Wait 1 to 3 seconds before next message
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
     } catch (error) {
         logger.error({ error: error.message }, 'Queue processing error');
+        if (isProcessing && messageQueue.length > 0) {
+             const failedTask = messageQueue.find(m => m.status === 'PENDING');
+             if (failedTask) logService.writeLog(failedTask.accountId, 'MESSAGE_ERROR', error.message);
+        }
     } finally {
         isProcessing = false;
     }

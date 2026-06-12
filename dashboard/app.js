@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
-    loadDashboardData();
+    fetchSystemData();
 });
 
 function initNavigation() {
@@ -56,7 +56,7 @@ async function createAccount() {
         });
         
         if(res.success) {
-            setTimeout(loadDashboardData, 1000); // Reload list
+            setTimeout(fetchSystemData, 1000); // Reload list
         } else {
             alert('Error: ' + res.error);
         }
@@ -106,31 +106,66 @@ async function checkStatus(accountId) {
         const res = await api(`/api/accounts/${accountId}/status`);
         if (res.status === 'CONNECTED') {
             closeModal('qrModal');
-            loadDashboardData(); // Refresh UI
+            fetchSystemData(); // Refresh UI
         } else {
             setTimeout(() => checkStatus(accountId), 3000); // Check again in 3s
         }
     } catch (e) {}
 }
 
-async function loadDashboardData() {
-    try {
-        const res = await api('/api/accounts');
-        if (res.success) {
-            renderAccounts(res.accounts);
-        }
-    } catch (e) {
-        console.error('Failed to load accounts');
-    }
-}
-
+// Removed loadDashboardData, using fetchSystemData instead
 async function deleteAccount(id) {
     if (!confirm(`Are you sure you want to delete ${id}?`)) return;
     try {
         await api(`/api/accounts/${id}/logout`, { method: 'POST' });
-        loadDashboardData();
+        fetchSystemData();
     } catch(e) {}
 }
+
+async function fetchSystemData() {
+    try {
+        const [accRes, sysRes] = await Promise.all([
+            fetch(`${API_BASE}/accounts`, { headers: { 'x-api-key': ADMIN_KEY } }),
+            fetch(`${API_BASE}/system/logs`, { headers: { 'x-api-key': ADMIN_KEY } })
+        ]);
+
+        if (accRes.ok) {
+            const data = await accRes.json();
+            if (data.success) renderAccounts(data.accounts);
+        }
+        
+        if (sysRes.ok) {
+            const data = await sysRes.json();
+            if (data.success) {
+                renderLogs(data.logs);
+                document.getElementById('stat-sent').textContent = data.stats.sent;
+                document.getElementById('stat-received').textContent = data.stats.received;
+            }
+        }
+    } catch(e) {}
+}
+
+function renderLogs(logs) {
+    const tbody = document.getElementById('logs-body');
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No logs available</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = logs.map(log => {
+        const time = new Date(log.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        return `
+            <tr>
+                <td>${time}</td>
+                <td><span class="badge" style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; font-size:0.75rem;">${log.account}</span></td>
+                <td><strong style="color: ${log.event.includes('FAILED') || log.event.includes('ERROR') ? 'var(--danger)' : log.event.includes('QUEUED') ? '#f59e0b' : 'var(--primary)'}">${log.event}</strong></td>
+                <td class="text-muted">${log.details}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+setInterval(fetchSystemData, 5000);
 
 async function testMessage(accountId, apiKey) {
     const number = prompt("Enter phone number to send test message to (with country code):");

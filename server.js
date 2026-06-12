@@ -8,6 +8,7 @@ const logger = require('./utils/logger');
 const { dashboardAuth, adminAuth, accountAuth } = require('./middleware/authMiddleware');
 const accountRoutes = require('./routes/accountRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const systemRoutes = require('./routes/systemRoutes');
 const queueService = require('./services/queueService');
 
 const app = express();
@@ -36,6 +37,7 @@ app.get('/', dashboardAuth, (req, res) => {
 // API Routes
 app.use('/api/accounts', adminAuth, accountRoutes);
 app.use('/api/messages', accountAuth, messageRoutes);
+app.use('/api/system', adminAuth, systemRoutes);
 
 // Ensure storage directories exist
 const setupStorage = () => {
