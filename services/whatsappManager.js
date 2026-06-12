@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 const qrcode = require('qrcode');
+const webhookService = require('./webhookService');
 
 // In-memory store for active sockets and their latest QR codes
 const sessions = new Map();
@@ -139,6 +140,14 @@ const initSession = async (accountId) => {
             const number = userJid.split(':')[0] || '-';
             
             updateAccountStatus(accountId, 'CONNECTED', `+${number}`);
+        }
+    });
+
+    socket.ev.on('messages.upsert', async (m) => {
+        if (m.type === 'notify') {
+            for (const msg of m.messages) {
+                webhookService.handleIncomingMessage(accountId, msg);
+            }
         }
     });
 

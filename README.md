@@ -60,6 +60,7 @@ API_KEY=your-master-admin-secret-key
 NODE_ENV=production
 DASHBOARD_USERNAME=admin
 DASHBOARD_PASSWORD=your_secure_password
+WEBHOOK_URL=https://hook.eu1.make.com/your-webhook-id # Optional: For receiving incoming messages
 ```
 
 ### 4. Run as a Background Service (PM2)
@@ -195,6 +196,24 @@ curl -X POST http://YOUR_VPS_IP/api/messages/send \
   "msgId": "msg_1718181234567"
 }
 ```
+
+---
+
+## 🪝 Incoming Webhooks
+
+If you set a `WEBHOOK_URL` in your `.env` file, the server will automatically forward all incoming WhatsApp messages to that URL via a `POST` request. This is perfect for connecting to Google Sheets, n8n, Make.com, or Dialogflow.
+
+**Webhook JSON Payload:**
+```json
+{
+  "account": "marketing_bot",
+  "sender": "919876543210",
+  "text": "Hello, I need help with my order!",
+  "messageType": "conversation",
+  "timestamp": "2024-06-12T10:30:00.000Z"
+}
+```
+*(Note: It automatically ignores messages sent by the bot itself, and filters out status updates).*
 
 ---
 
