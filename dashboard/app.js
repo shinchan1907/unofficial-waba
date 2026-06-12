@@ -132,6 +132,34 @@ async function deleteAccount(id) {
     } catch(e) {}
 }
 
+async function testMessage(accountId, apiKey) {
+    const number = prompt("Enter phone number to send test message to (with country code):");
+    if (!number) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/messages/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey
+            },
+            body: JSON.stringify({
+                account: accountId,
+                number: number,
+                message: "Hello from WA Server! This is a test message."
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert("Message queued successfully!");
+        } else {
+            alert("Failed: " + data.error);
+        }
+    } catch (error) {
+        alert("Error sending message.");
+    }
+}
+
 function renderAccounts(accounts) {
     const container = document.getElementById('accounts-container');
     container.innerHTML = '';
@@ -160,7 +188,7 @@ function renderAccounts(accounts) {
                 </div>
                 <div class="account-actions">
                     ${isConnected ? 
-                        `<button class="btn" onclick="alert('Sending test...')">Test Msg</button>
+                        `<button class="btn" onclick="testMessage('${acc.id}', '${acc.apiKey}')">Test Msg</button>
                          <button class="btn" style="color:var(--danger); border-color:#fca5a5" onclick="deleteAccount('${acc.id}')">Logout</button>` :
                         `<button class="btn btn-primary" onclick="showQR('${acc.id}')">Scan QR</button>
                          <button class="btn" style="color:var(--danger); border-color:#fca5a5" onclick="deleteAccount('${acc.id}')">Delete</button>`
