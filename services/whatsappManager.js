@@ -167,6 +167,12 @@ const initSession = async (accountId) => {
         }
     });
 
+    socket.ev.on('messages.update', async (updates) => {
+        for (const update of updates) {
+            webhookService.handleMessageStatus(accountId, update);
+        }
+    });
+
     return socket;
 };
 
