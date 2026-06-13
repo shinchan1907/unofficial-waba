@@ -36,6 +36,10 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                     Flow Builder
                 </a>
+                <a href="#chats" id="nav-chats">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14l4-4h14a2 2 0 0 0 2-2z"></path></svg>
+                    Live Chats
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <p>Version 1.0.0</p>
@@ -287,6 +291,37 @@
                 </div>
             </div>
             
+            <!-- LIVE CHATS VIEW -->
+            <div id="view-chats" class="view" style="height: calc(100vh - 100px);">
+                <div class="actions-bar" style="margin-bottom: 12px; padding: 0 32px;">
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <select id="chat-account-select" class="btn" style="padding: 8px;">
+                            <option value="">Select Account</option>
+                        </select>
+                        <p class="text-muted" style="margin:0;">View live conversations handled by the automation.</p>
+                    </div>
+                </div>
+                
+                <div style="display:flex; height:100%; border-top:1px solid var(--border); margin:0 32px;">
+                    <!-- Chat List Sidebar -->
+                    <div style="width: 300px; border-right: 1px solid var(--border); background: #fff; overflow-y: auto;" id="chat-contacts-list">
+                        <div style="padding: 20px; text-align: center; color: var(--text-muted);">
+                            Select an account to load chats.
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Conversation View -->
+                    <div style="flex: 1; display: flex; flex-direction: column; background: #f8fafc;">
+                        <div style="padding: 16px; border-bottom: 1px solid var(--border); background: #fff; display: flex; align-items: center;">
+                            <h3 id="chat-active-contact" style="margin: 0; font-size: 1rem;">Select a conversation</h3>
+                        </div>
+                        <div id="chat-messages-container" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+                            <!-- Messages will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </main>
     </div>
 
@@ -325,5 +360,6 @@
 
     <script src="app.js?v=2"></script>
     <script src="flow.js?v=2"></script>
+    <script src="chats.js?v=1"></script>
 </body>
 </html>

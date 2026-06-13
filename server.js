@@ -10,6 +10,7 @@ const accountRoutes = require('./routes/accountRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const systemRoutes = require('./routes/systemRoutes');
 const flowRoutes = require('./routes/flowRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 const queueService = require('./services/queueService');
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/accounts', adminAuth, accountRoutes);
 app.use('/api/messages', accountAuth, messageRoutes);
 app.use('/api/system', adminAuth, systemRoutes);
 app.use('/api/flows', flowRoutes);
+app.use('/api/chats', chatRoutes);
 
 // Ensure storage directories exist
 const setupStorage = () => {

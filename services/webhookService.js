@@ -28,6 +28,9 @@ const handleIncomingMessage = async (accountId, message) => {
             text = `[${msgType}]`; // Other media types like audio, stickers, etc.
         }
 
+        const chatController = require('../controllers/chatController');
+        chatController.logMessage(accountId, sender, 'user', text, msgType);
+
         // Log the received message to the UI
         logService.writeLog(accountId, 'MESSAGE_RECEIVED', `From: ${sender}`);
 
