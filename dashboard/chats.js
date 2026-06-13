@@ -234,10 +234,8 @@ let currentAgentName = localStorage.getItem('agentName');
 
 function ensureAgentName() {
     if (!currentAgentName) {
-        currentAgentName = prompt("Please enter your Agent Name to reply to chats:");
-        if (currentAgentName) {
-            localStorage.setItem('agentName', currentAgentName);
-        }
+        alert("Please select an Agent from the 'Operating As' dropdown in the top right corner before replying.");
+        return null;
     }
     return currentAgentName;
 }
