@@ -221,7 +221,8 @@
             </div>
             
             <!-- FLOW BUILDER VIEW -->
-            <div id="view-flows" class="view" style="padding: 0 32px 0px 32px; height: calc(100vh - 120px); display: none; flex-direction: column;">
+            <div id="view-flows" class="view" style="padding: 0 32px 0px 32px; height: calc(100vh - 120px);">
+                <div style="display: flex; flex-direction: column; height: 100%;">
                 <div class="actions-bar" style="margin-bottom: 12px;">
                     <div style="display:flex; gap:12px; align-items:center;">
                         <select id="flow-account-select" class="btn" style="padding: 8px;">
@@ -268,11 +269,11 @@
                         <!-- Drawflow canvas -->
                     </div>
                 </div>
-                
                 <!-- Webhook URL Display -->
                 <div style="margin-top: 16px; background: #fff; padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
                     <p style="font-size:0.85rem; font-weight:600; margin-bottom:8px;">Webhook URL for this flow (Google Apps Script POST destination):</p>
                     <code id="flow-webhook-url" style="background:#f1f5f9; padding:8px 12px; border-radius:4px; display:block; color:var(--text-main); font-size:0.85rem;">Select an account to view webhook URL</code>
+                </div>
                 </div>
             </div>
             
