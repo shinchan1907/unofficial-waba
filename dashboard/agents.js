@@ -80,7 +80,7 @@ function showAddAgentModal() {
     document.getElementById('newAgentUsername').value = '';
     document.getElementById('newAgentPassword').value = '';
     document.getElementById('newAgentRole').value = 'Agent';
-    document.getElementById('addAgentModal').style.display = 'flex';
+    document.getElementById('addAgentModal').classList.add('active');
 }
 
 async function submitAddAgent() {
