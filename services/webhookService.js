@@ -1,6 +1,8 @@
 const logger = require('../utils/logger');
 const logService = require('./logService');
 
+global._flowState = global._flowState || {};
+
 const handleIncomingMessage = async (accountId, message) => {
     try {
         if (!message.message) return; // Not a standard message
@@ -29,6 +31,12 @@ const handleIncomingMessage = async (accountId, message) => {
         // Log the received message to the UI
         logService.writeLog(accountId, 'MESSAGE_RECEIVED', `From: ${sender}`);
 
+        // Update global flow state for incoming messages
+        global._flowState[accountId] = global._flowState[accountId] || {};
+        global._flowState[accountId][sender] = global._flowState[accountId][sender] || {};
+        global._flowState[accountId][sender].replied = true;
+        global._flowState[accountId][sender].lastMessage = text;
+
         // Get specific account webhook, fallback to global env
         const accounts = require('./whatsappManager').getAccounts();
         const account = accounts.find(a => a.id === accountId);
@@ -55,6 +63,13 @@ const handleIncomingMessage = async (accountId, message) => {
         }).catch(err => {
             logger.error({ err: err.message }, 'Failed to deliver webhook');
         });
+        // Also trigger internal flow engine if the incoming node exists!
+        // We do this by hitting our own internal webhook endpoint locally
+        fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/flows/webhook/${accountId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(() => {});
         
     } catch (error) {
         logger.error({ error: error.message }, 'Error parsing incoming message');
@@ -77,6 +92,11 @@ const handleMessageStatus = async (accountId, update) => {
         // Log the read receipt to dashboard
         if (statusName === 'READ') {
             logService.writeLog(accountId, 'MESSAGE_READ', `By: ${recipient}`);
+            
+            // Update global flow state for seen
+            global._flowState[accountId] = global._flowState[accountId] || {};
+            global._flowState[accountId][recipient] = global._flowState[accountId][recipient] || {};
+            global._flowState[accountId][recipient].seen = true;
         }
 
         const accounts = require('./whatsappManager').getAccounts();

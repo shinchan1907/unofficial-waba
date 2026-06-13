@@ -231,6 +231,7 @@
                         <p class="text-muted" style="margin:0;">Build visual automation flows.</p>
                     </div>
                     <div style="display:flex; gap:12px;">
+                        <button class="btn btn-secondary" onclick="toggleFullscreen()" id="btn-fullscreen">Fullscreen</button>
                         <button class="btn btn-primary" onclick="saveFlow()">Save Flow</button>
                         <button class="btn" onclick="clearFlow()">Clear</button>
                     </div>
@@ -243,14 +244,22 @@
                             <div class="node-icon" style="background:#f59e0b">⚡</div>
                             <span>Webhook Trigger</span>
                         </div>
+                        <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="incoming">
+                            <div class="node-icon" style="background:#059669">📥</div>
+                            <span>Incoming Message</span>
+                        </div>
                         
                         <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; margin-top: 12px;">Actions</h3>
                         <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="message">
                             <div class="node-icon" style="background:#3b82f6">💬</div>
                             <span>Send Message</span>
                         </div>
+                        <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="ai_agent">
+                            <div class="node-icon" style="background:#8b5cf6">🤖</div>
+                            <span>AI Agent</span>
+                        </div>
                         <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="timer">
-                            <div class="node-icon" style="background:#8b5cf6">⏱️</div>
+                            <div class="node-icon" style="background:#6366f1">⏱️</div>
                             <span>Timer / Delay</span>
                         </div>
                         

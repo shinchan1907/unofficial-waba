@@ -72,6 +72,17 @@ function addNodeToDrawFlow(name, pos_x, pos_y) {
     editor.addNode(name, template.inputs, template.outputs, pos_x, pos_y, name, template.data, template.html);
 }
 
+function toggleFullscreen() {
+    const container = document.getElementById('view-flows');
+    container.classList.toggle('fullscreen-flow');
+    const btn = document.getElementById('btn-fullscreen');
+    if (container.classList.contains('fullscreen-flow')) {
+        btn.innerText = 'Exit Fullscreen';
+    } else {
+        btn.innerText = 'Fullscreen';
+    }
+}
+
 function getNodeTemplate(name) {
     switch (name) {
         case 'webhook':
@@ -86,13 +97,27 @@ function getNodeTemplate(name) {
                     <div class="box">
                         <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0;">Maps incoming JSON payload.</p>
                         <div>
-                            <label>Phone Field Key</label>
+                            <label>Phone Field Key (Required)</label>
                             <input type="text" name="phoneField" df-phoneField placeholder="e.g. phone" value="phone">
                         </div>
                         <div>
-                            <label>Name Field Key</label>
+                            <label>Name Field Key (Optional)</label>
                             <input type="text" name="nameField" df-nameField placeholder="e.g. name" value="name">
                         </div>
+                    </div>
+                `
+            };
+        case 'incoming':
+            return {
+                inputs: 0,
+                outputs: 1,
+                data: {},
+                html: `
+                    <div class="title-box" style="background:#d1fae5; color:#065f46; border-color:#a7f3d0;">
+                        <span class="node-icon" style="background:#059669">📥</span> Incoming Message
+                    </div>
+                    <div class="box">
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin:0;">Triggers when a user sends a WhatsApp message.</p>
                     </div>
                 `
             };
@@ -108,11 +133,32 @@ function getNodeTemplate(name) {
                     <div class="box">
                         <div>
                             <label>Message Text</label>
-                            <textarea name="message" df-message placeholder="Enter message... You can use {{key}} variables.">Hello {{name}}!</textarea>
+                            <textarea name="message" df-message placeholder="Enter message... You can use {{name}} variables.">Hello {{name}}!</textarea>
                         </div>
                         <div>
                             <label>Media URL (Optional)</label>
                             <input type="url" name="mediaUrl" df-mediaUrl placeholder="https://...">
+                        </div>
+                    </div>
+                `
+            };
+        case 'ai_agent':
+            return {
+                inputs: 1,
+                outputs: 1,
+                data: { apiKey: '', prompt: 'You are a helpful assistant. Keep answers brief.' },
+                html: `
+                    <div class="title-box" style="background:#ede9fe; color:#5b21b6; border-color:#ddd6fe;">
+                        <span class="node-icon" style="background:#8b5cf6">🤖</span> AI Agent
+                    </div>
+                    <div class="box">
+                        <div>
+                            <label>OpenAI API Key</label>
+                            <input type="password" name="apiKey" df-apiKey placeholder="sk-...">
+                        </div>
+                        <div>
+                            <label>System Prompt (Guidelines)</label>
+                            <textarea name="prompt" df-prompt placeholder="Strict guidelines for the AI...">You are a helpful assistant...</textarea>
                         </div>
                     </div>
                 `
@@ -138,23 +184,31 @@ function getNodeTemplate(name) {
             return {
                 inputs: 1,
                 outputs: 2,
-                data: { conditionField: 'status', conditionValue: 'paid' },
+                data: { conditionType: 'payload', conditionField: 'status', conditionValue: 'paid' },
                 html: `
-                    <div class="title-box" style="background:#d1fae5; color:#065f46; border-color:#a7f3d0;">
-                        <span class="node-icon" style="background:#10b981">🔀</span> If / Else
+                    <div class="title-box" style="background:#ccfbf1; color:#0f766e; border-color:#99f6e4;">
+                        <span class="node-icon" style="background:#14b8a6">🔀</span> If / Else
                     </div>
                     <div class="box">
                         <div>
-                            <label>Payload Field</label>
+                            <label>Condition Type</label>
+                            <select name="conditionType" df-conditionType>
+                                <option value="payload">Payload Field</option>
+                                <option value="replied">Has Replied?</option>
+                                <option value="seen">Has Seen/Read?</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Field (if Payload)</label>
                             <input type="text" name="conditionField" df-conditionField value="status">
                         </div>
                         <div>
-                            <label>Equals Value</label>
+                            <label>Equals Value (if Payload)</label>
                             <input type="text" name="conditionValue" df-conditionValue value="paid">
                         </div>
                         <div style="display:flex; justify-content: space-between; font-size: 0.75rem; color:var(--text-muted); margin-top:8px;">
-                            <span>Output 1: True</span>
-                            <span>Output 2: False</span>
+                            <span>Output 1: Yes</span>
+                            <span>Output 2: No</span>
                         </div>
                     </div>
                 `
