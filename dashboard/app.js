@@ -118,6 +118,8 @@ async function api(path, options = {}) {
     const res = await fetch(path, { ...defaultOptions, ...options });
     
     if (res.status === 401) {
+        if (!token) return { success: false, error: 'Unauthorized' }; // Prevent infinite reload if already logged out
+        
         localStorage.removeItem('jwtToken');
         localStorage.removeItem('currentUser');
         window.location.reload();
@@ -206,7 +208,6 @@ async function checkStatus(accountId) {
     } catch (e) {}
 }
 
-// Removed loadDashboardData, using fetchSystemData instead
 async function deleteAccount(id) {
     if (!confirm(`Are you sure you want to delete ${id}?`)) return;
     try {
@@ -216,25 +217,19 @@ async function deleteAccount(id) {
 }
 
 async function fetchSystemData() {
-    if (isTyping) return;
+    if (isTyping || !localStorage.getItem('jwtToken')) return;
     try {
-        const [accRes, sysRes] = await Promise.all([
-            fetch(`${API_BASE}/accounts`, { headers: { 'x-api-key': ADMIN_KEY } }),
-            fetch(`${API_BASE}/system/logs`, { headers: { 'x-api-key': ADMIN_KEY } })
-        ]);
+        const accRes = await api(`${API_BASE}/accounts`);
+        const sysRes = await api(`${API_BASE}/system/logs`);
 
-        if (accRes.ok) {
-            const data = await accRes.json();
-            if (data.success) renderAccounts(data.accounts);
+        if (accRes && accRes.success) {
+            renderAccounts(accRes.accounts);
         }
         
-        if (sysRes.ok) {
-            const data = await sysRes.json();
-            if (data.success) {
-                renderLogs(data.logs);
-                document.getElementById('stat-sent').textContent = data.stats.sent;
-                document.getElementById('stat-received').textContent = data.stats.received;
-            }
+        if (sysRes && sysRes.success) {
+            renderLogs(sysRes.logs);
+            document.getElementById('stat-sent').textContent = sysRes.stats.sent;
+            document.getElementById('stat-received').textContent = sysRes.stats.received;
         }
     } catch(e) {}
 }
