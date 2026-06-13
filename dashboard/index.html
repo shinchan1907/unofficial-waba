@@ -446,8 +446,6 @@
     </div>
 
     <script>
-        const ADMIN_KEY = 'admin123'; // Matches config
-        
         // Setup fetch interceptor to add API key
         const originalFetch = window.fetch;
         window.fetch = function() {
@@ -458,13 +456,13 @@
             if(config.headers == null) {
                 config.headers = {};
             }
-            config.headers['x-api-key'] = ADMIN_KEY;
+            config.headers['x-api-key'] = window.ADMIN_KEY || 'admin123';
             return originalFetch(resource, config);
         };
     </script>
-    <script src="app.js?v=3"></script>
-    <script src="flow.js?v=3"></script>
-    <script src="chats.js?v=3"></script>
-    <script src="agents.js?v=3"></script>
+    <script src="app.js?v=4"></script>
+    <script src="flow.js?v=4"></script>
+    <script src="chats.js?v=4"></script>
+    <script src="agents.js?v=4"></script>
 </body>
 </html>
