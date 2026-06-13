@@ -32,7 +32,7 @@ const saveQueue = () => {
     }
 };
 
-const addToQueue = (accountId, to, message, media = null) => {
+const addToQueue = (accountId, to, message, media = null, agentName = null) => {
     const msgId = 'msg_' + Date.now() + Math.floor(Math.random() * 1000);
     messageQueue.push({
         id: msgId,
@@ -40,6 +40,7 @@ const addToQueue = (accountId, to, message, media = null) => {
         to,
         message,
         media,
+        agentName,
         status: 'PENDING',
         createdAt: new Date().toISOString()
     });
@@ -105,7 +106,8 @@ const processQueue = async () => {
         logService.writeLog(task.accountId, 'MESSAGE_SENT', `To: ${task.to}`);
         
         const chatController = require('../controllers/chatController');
-        chatController.logMessage(task.accountId, task.to, 'bot', task.message, task.media ? task.media.type : 'text');
+        const senderType = task.agentName ? `agent:${task.agentName}` : 'bot';
+        chatController.logMessage(task.accountId, task.to, senderType, task.message, task.media ? task.media.type : 'text');
 
         // Anti-ban delay: Wait 1 to 3 seconds before next message
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));

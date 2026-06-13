@@ -20,7 +20,7 @@ const sendMessage = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Account is not connected or active.' });
         }
 
-        const msgId = queueService.addToQueue(account, number, message);
+        const msgId = queueService.addToQueue(account, number, message, media, req.body.agentName);
         
         res.json({
             success: true,
