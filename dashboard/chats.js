@@ -153,16 +153,27 @@ function renderMessages(phone) {
     
     container.innerHTML = chat.messages.map(msg => {
         const isBot = msg.sender === 'bot';
-        const bg = isBot ? '#dbeafe' : '#e2e8f0';
-        const color = isBot ? '#1e3a8a' : '#0f172a';
-        const align = isBot ? 'flex-end' : 'flex-start';
+        const isAgent = msg.sender.startsWith('agent:');
+        const isSelf = isBot || isAgent;
+        
+        const bg = isSelf ? '#dbeafe' : '#e2e8f0';
+        const color = isSelf ? '#1e3a8a' : '#0f172a';
+        const align = isSelf ? 'flex-end' : 'flex-start';
         const text = (msg.text || '').replace(/\n/g, '<br>');
         
         const date = new Date(msg.timestamp);
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
+        let senderLabel = '';
+        if (isBot) senderLabel = '🤖 Bot';
+        else if (isAgent) senderLabel = `👤 ${msg.sender.split(':')[1]}`;
+        else senderLabel = `📱 ${phone}`;
+        
         return `
             <div style="display: flex; flex-direction: column; align-items: ${align}; width: 100%;">
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px; padding: 0 4px;">
+                    ${senderLabel}
+                </div>
                 <div style="background: ${bg}; color: ${color}; padding: 10px 14px; border-radius: 12px; max-width: 75%; font-size: 0.9rem;">
                     ${text}
                 </div>
@@ -219,11 +230,26 @@ function handleChatKeyPress(e) {
     }
 }
 
+let currentAgentName = localStorage.getItem('agentName');
+
+function ensureAgentName() {
+    if (!currentAgentName) {
+        currentAgentName = prompt("Please enter your Agent Name to reply to chats:");
+        if (currentAgentName) {
+            localStorage.setItem('agentName', currentAgentName);
+        }
+    }
+    return currentAgentName;
+}
+
 async function sendChatReply() {
     const input = document.getElementById('chat-reply-input');
     const text = input.value.trim();
     
     if (!text || !currentChatAccount || !activeChatPhone) return;
+    
+    const agent = ensureAgentName();
+    if (!agent) return; // User cancelled prompt
     
     input.value = '';
     
@@ -233,7 +259,8 @@ async function sendChatReply() {
             body: JSON.stringify({
                 account: currentChatAccount,
                 number: activeChatPhone,
-                message: text
+                message: text,
+                agentName: agent
             })
         });
         
@@ -241,7 +268,7 @@ async function sendChatReply() {
             // Optimistically add to UI
             if (!allChats[activeChatPhone]) allChats[activeChatPhone] = { messages: [] };
             allChats[activeChatPhone].messages.push({
-                sender: 'bot',
+                sender: `agent:${agent}`,
                 text: text,
                 type: 'text',
                 timestamp: new Date().toISOString()
@@ -258,3 +285,4 @@ async function sendChatReply() {
         input.value = text;
     }
 }
+
