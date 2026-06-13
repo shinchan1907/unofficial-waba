@@ -67,12 +67,8 @@ const handleIncomingMessage = async (accountId, message) => {
             logger.error({ err: err.message }, 'Failed to deliver webhook');
         });
         // Also trigger internal flow engine if the incoming node exists!
-        // We do this by hitting our own internal webhook endpoint locally
-        fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/flows/webhook/${accountId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).catch(() => {});
+        const flowController = require('../controllers/flowController');
+        flowController.executeIncoming(accountId, payload);
         
     } catch (error) {
         logger.error({ error: error.message }, 'Error parsing incoming message');

@@ -232,7 +232,10 @@
                         <select id="flow-account-select" class="btn" style="padding: 8px;">
                             <option value="">Select Account</option>
                         </select>
-                        <p class="text-muted" style="margin:0;">Build visual automation flows.</p>
+                        <select id="flow-select" class="btn" style="padding: 8px; display: none;">
+                            <option value="">Select Flow</option>
+                        </select>
+                        <button class="btn" id="btn-create-flow" style="display: none; padding: 8px;" onclick="createNewFlow()">+ New Flow</button>
                     </div>
                     <div style="display:flex; gap:12px;">
                         <button class="btn" onclick="testFlow()" id="btn-test" style="background:#f59e0b; color:white; border:none;" title="Simulates a dummy webhook payload to test the flow">Test Flow</button>

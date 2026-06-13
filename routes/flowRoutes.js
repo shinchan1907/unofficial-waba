@@ -3,9 +3,10 @@ const router = express.Router();
 const flowController = require('../controllers/flowController');
 const { adminAuth } = require('../middleware/authMiddleware');
 
-router.get('/:accountId', adminAuth, flowController.getFlow);
-router.post('/:accountId', adminAuth, flowController.saveFlow);
+router.get('/:accountId', adminAuth, flowController.getFlows);
+router.post('/:accountId/:flowId', adminAuth, flowController.saveFlow);
+router.delete('/:accountId/:flowId', adminAuth, flowController.deleteFlow);
 router.get('/webhook/latest/:accountId', adminAuth, flowController.getLatestWebhook);
-router.post('/webhook/:accountId', flowController.executeWebhook);
+router.post('/webhook/:accountId/:flowId?', flowController.executeWebhook);
 
 module.exports = router;

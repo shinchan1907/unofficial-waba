@@ -6,7 +6,30 @@ const logService = require('../services/logService');
 
 const readFlows = () => {
     try {
-        return JSON.parse(fs.readFileSync(config.storagePaths.flows, 'utf8'));
+        let data = JSON.parse(fs.readFileSync(config.storagePaths.flows, 'utf8'));
+        let needsSave = false;
+        // Migrate old format to new format
+        Object.keys(data).forEach(accId => {
+            if (data[accId] && typeof data[accId] === 'object') {
+                const keys = Object.keys(data[accId]);
+                // Old format has node IDs as keys (1, 2, 3)
+                const isOld = keys.some(k => !isNaN(parseInt(k)) && data[accId][k].class !== undefined);
+                if (isOld) {
+                    const oldFlow = data[accId];
+                    data[accId] = {
+                        'default_flow': {
+                            id: 'default_flow',
+                            name: 'Default Flow',
+                            data: oldFlow,
+                            isActive: true
+                        }
+                    };
+                    needsSave = true;
+                }
+            }
+        });
+        if (needsSave) writeFlows(data);
+        return data;
     } catch (e) {
         return {};
     }
@@ -16,21 +39,40 @@ const writeFlows = (data) => {
     fs.writeFileSync(config.storagePaths.flows, JSON.stringify(data, null, 2));
 };
 
-exports.getFlow = (req, res) => {
+exports.getFlows = (req, res) => {
     const { accountId } = req.params;
     const flows = readFlows();
-    res.json({ success: true, flow: flows[accountId] || {} });
+    res.json({ success: true, flows: flows[accountId] || {} });
 };
 
 exports.saveFlow = (req, res) => {
-    const { accountId } = req.params;
-    const { flow } = req.body;
+    const { accountId, flowId } = req.params;
+    const { name, data, isActive } = req.body;
     
-    if (!flow) return res.status(400).json({ success: false, error: 'Flow data missing' });
+    if (!data) return res.status(400).json({ success: false, error: 'Flow data missing' });
 
     const flows = readFlows();
-    flows[accountId] = flow;
+    if (!flows[accountId]) flows[accountId] = {};
+    
+    flows[accountId][flowId] = {
+        id: flowId,
+        name: name || 'Unnamed Flow',
+        data: data,
+        isActive: isActive !== undefined ? isActive : true
+    };
+    
     writeFlows(flows);
+    res.json({ success: true });
+};
+
+exports.deleteFlow = (req, res) => {
+    const { accountId, flowId } = req.params;
+    const flows = readFlows();
+    
+    if (flows[accountId] && flows[accountId][flowId]) {
+        delete flows[accountId][flowId];
+        writeFlows(flows);
+    }
     
     res.json({ success: true });
 };
@@ -51,29 +93,15 @@ exports.getLatestWebhook = async (req, res) => {
     }
 };
 
-// Flow Execution Engine
-exports.executeWebhook = async (req, res) => {
-    const { accountId } = req.params;
-    const payload = req.body;
-    
-    // Save payload for debugging / UI visibility
-    try {
-        const payloadFile = path.join(path.dirname(config.storagePaths.flows), `latest_webhook_${accountId}.json`);
-        fs.writeFileSync(payloadFile, JSON.stringify(payload, null, 2));
-    } catch(e) {
-        // ignore write errors here
-    }
-    
-    const flows = readFlows();
-    const flowData = flows[accountId];
-    
-    if (!flowData || Object.keys(flowData).length === 0) {
-        return res.status(404).json({ success: false, error: 'No flow configured for this account' });
+// Extracted internal runner
+const runFlow = (accountId, flowDataObj, payload, isIncomingMessage, res = null) => {
+    if (!flowDataObj || !flowDataObj.isActive) {
+        if (res) res.status(404).json({ success: false, error: 'Flow not active or missing' });
+        return;
     }
 
-    // Determine trigger node based on event type
+    const nodes = Object.values(flowDataObj.data);
     let triggerNode = null;
-    const isIncomingMessage = payload.event === 'message_received';
     
     if (isIncomingMessage) {
         triggerNode = nodes.find(n => n.name === 'incoming');
@@ -82,12 +110,14 @@ exports.executeWebhook = async (req, res) => {
     }
     
     if (!triggerNode) {
-        // If it's just a background webhook hitting a flow that doesn't have the right trigger, ignore silently
-        return res.status(200).json({ success: true, message: 'No matching trigger found' });
+        if (res) res.status(200).json({ success: true, message: 'No matching trigger found in this flow' });
+        return;
     }
 
-    // Acknowledge webhook immediately
-    res.json({ success: true, message: 'Flow execution started' });
+    if (res) {
+        res.json({ success: true, message: 'Flow execution started' });
+    }
+    
     logService.writeLog(accountId, 'FLOW_TRIGGERED', isIncomingMessage ? 'Incoming Message received' : 'Webhook received payload');
 
     // Extract basic data based on trigger configuration
@@ -124,7 +154,54 @@ exports.executeWebhook = async (req, res) => {
     }
 
     // Start execution
-    executeNextNodes(flowData, triggerNode.outputs, context);
+    executeNextNodes(flowDataObj.data, triggerNode.outputs, context);
+};
+
+// Main webhook entry for a specific flow (e.g. from Make/n8n/Apps Script)
+exports.executeWebhook = async (req, res) => {
+    const { accountId, flowId } = req.params;
+    const payload = req.body;
+    
+    // Save payload for debugging / UI visibility
+    try {
+        const payloadFile = path.join(path.dirname(config.storagePaths.flows), `latest_webhook_${accountId}.json`);
+        fs.writeFileSync(payloadFile, JSON.stringify(payload, null, 2));
+    } catch(e) {}
+    
+    const flows = readFlows();
+    const accountFlows = flows[accountId] || {};
+    
+    // If flowId is provided, run that specific flow
+    if (flowId && accountFlows[flowId]) {
+        runFlow(accountId, accountFlows[flowId], payload, false, res);
+        return;
+    }
+    
+    // If no flowId provided (legacy support), try to find a default flow
+    if (!flowId) {
+        const defaultFlow = accountFlows['default_flow'] || Object.values(accountFlows)[0];
+        if (defaultFlow) {
+            runFlow(accountId, defaultFlow, payload, false, res);
+            return;
+        }
+    }
+    
+    res.status(404).json({ success: false, error: 'No flow configured for this webhook' });
+};
+
+// Entry point for incoming WhatsApp messages
+exports.executeIncoming = (accountId, payload) => {
+    const flows = readFlows();
+    const accountFlows = flows[accountId] || {};
+    
+    // Incoming messages could potentially trigger multiple flows (e.g. keyword routers).
+    // For now, we execute all active flows that have an 'incoming' trigger.
+    // In the future, we can add keyword checking logic here before executing.
+    Object.values(accountFlows).forEach(flow => {
+        if (flow.isActive) {
+            runFlow(accountId, flow, payload, true);
+        }
+    });
 };
 
 // Helper to extract nested values (e.g. "user.phone")

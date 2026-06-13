@@ -253,31 +253,98 @@ async function initFlowAccounts() {
     } catch(e) {}
 }
 
+let currentFlowId = null;
+let currentAccountFlows = {};
+
 async function onFlowAccountChange(e) {
     currentFlowAccount = e.target.value;
     const urlDisplay = document.getElementById('flow-webhook-url');
+    const flowSelect = document.getElementById('flow-select');
+    const createBtn = document.getElementById('btn-create-flow');
     
     if (!currentFlowAccount) {
         editor.clear();
         urlDisplay.textContent = 'Select an account to view webhook URL';
+        flowSelect.style.display = 'none';
+        createBtn.style.display = 'none';
         return;
     }
     
-    // Set Webhook URL
-    const host = window.location.origin;
-    urlDisplay.textContent = `${host}/api/flows/webhook/${currentFlowAccount}`;
+    flowSelect.style.display = 'block';
+    createBtn.style.display = 'block';
+    urlDisplay.textContent = 'Select a flow to view webhook URL';
     
-    // Load existing flow
+    // Load existing flows
     try {
         const res = await api(`/api/flows/${currentFlowAccount}`);
-        if (res.success && res.flow && Object.keys(res.flow).length > 0) {
-            editor.import({ drawflow: { Home: { data: res.flow } } });
+        if (res.success && res.flows) {
+            currentAccountFlows = res.flows;
+            updateFlowDropdown();
+            
+            if (Object.keys(currentAccountFlows).length > 0) {
+                // Select the first flow by default
+                const firstFlowId = Object.keys(currentAccountFlows)[0];
+                flowSelect.value = firstFlowId;
+                selectFlow(firstFlowId);
+            } else {
+                editor.clear();
+            }
         } else {
             editor.clear();
         }
     } catch (err) {
         editor.clear();
     }
+}
+
+function updateFlowDropdown() {
+    const flowSelect = document.getElementById('flow-select');
+    flowSelect.innerHTML = '<option value="">Select Flow</option>';
+    Object.keys(currentAccountFlows).forEach(id => {
+        const f = currentAccountFlows[id];
+        flowSelect.innerHTML += `<option value="${id}">${f.name}</option>`;
+    });
+    
+    flowSelect.onchange = (e) => selectFlow(e.target.value);
+}
+
+function selectFlow(flowId) {
+    currentFlowId = flowId;
+    const urlDisplay = document.getElementById('flow-webhook-url');
+    
+    if (!flowId) {
+        editor.clear();
+        urlDisplay.textContent = 'Select a flow to view webhook URL';
+        return;
+    }
+    
+    const host = window.location.origin;
+    urlDisplay.textContent = `${host}/api/flows/webhook/${currentFlowAccount}/${flowId}`;
+    
+    const flowObj = currentAccountFlows[flowId];
+    if (flowObj && flowObj.data) {
+        editor.import({ drawflow: { Home: { data: flowObj.data } } });
+    } else {
+        editor.clear();
+    }
+}
+
+function createNewFlow() {
+    const name = prompt("Enter a name for the new flow:", "New Flow");
+    if (!name) return;
+    
+    const id = 'flow_' + Date.now();
+    currentAccountFlows[id] = {
+        id: id,
+        name: name,
+        data: {},
+        isActive: true
+    };
+    
+    updateFlowDropdown();
+    const flowSelect = document.getElementById('flow-select');
+    flowSelect.value = id;
+    selectFlow(id);
 }
 
 function clearFlow() {
@@ -308,8 +375,8 @@ async function fetchLatestWebhook(btn) {
 }
 
 async function testFlow() {
-    if (!currentFlowAccount) {
-        return alert("Please select an account first.");
+    if (!currentFlowAccount || !currentFlowId) {
+        return alert("Please select an account and a flow first.");
     }
     
     const exportdata = editor.export();
@@ -336,7 +403,7 @@ async function testFlow() {
     btn.innerText = 'Testing...';
     
     try {
-        const response = await fetch(`/api/flows/webhook/${currentFlowAccount}`, {
+        const response = await fetch(`/api/flows/webhook/${currentFlowAccount}/${currentFlowId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -355,25 +422,32 @@ async function testFlow() {
 }
 
 async function saveFlow() {
-    if (!currentFlowAccount) {
-        return alert("Please select an account first.");
+    if (!currentFlowAccount || !currentFlowId) {
+        return alert("Please select an account and flow first.");
     }
     
     const exportdata = editor.export();
-    const flowData = exportdata.drawflow.Home.data;
+    const flowDataObj = exportdata.drawflow.Home.data;
+    const currentFlowMeta = currentAccountFlows[currentFlowId];
     
     try {
-        const res = await fetch(`/api/flows/${currentFlowAccount}`, {
+        const res = await fetch(`/api/flows/${currentFlowAccount}/${currentFlowId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': ADMIN_KEY
             },
-            body: JSON.stringify({ flow: flowData })
+            body: JSON.stringify({ 
+                name: currentFlowMeta.name,
+                isActive: currentFlowMeta.isActive,
+                data: flowDataObj 
+            })
         });
         const data = await res.json();
         if (data.success) {
             alert('Flow saved successfully!');
+            // Update local memory
+            currentAccountFlows[currentFlowId].data = flowDataObj;
         } else {
             alert('Error saving flow: ' + data.error);
         }
