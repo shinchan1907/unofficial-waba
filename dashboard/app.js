@@ -15,18 +15,37 @@ function initNavigation() {
     const views = document.querySelectorAll('.view');
     const pageTitle = document.getElementById('page-title');
 
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
+    // Function to activate a view based on hash
+    const activateHash = (hash) => {
+        if (!hash) hash = 'overview';
+        else if (hash.startsWith('#')) hash = hash.substring(1);
+        
+        const targetLink = document.getElementById(`nav-${hash}`);
+        const targetView = document.getElementById(`view-${hash}`);
+        
+        if (targetLink && targetView) {
             navLinks.forEach(l => l.classList.remove('active'));
             views.forEach(v => v.classList.remove('active'));
             
-            link.classList.add('active');
-            const targetId = link.getAttribute('href').substring(1);
-            document.getElementById(`view-${targetId}`).classList.add('active');
-            pageTitle.textContent = link.textContent.trim();
+            targetLink.classList.add('active');
+            targetView.classList.add('active');
+            pageTitle.textContent = targetLink.textContent.trim();
+        }
+    };
+
+    // Bind clicks
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const hash = link.getAttribute('href');
+            // Allow default behavior to change the URL hash
+            activateHash(hash);
         });
     });
+
+    // Check initial hash
+    if (window.location.hash) {
+        activateHash(window.location.hash);
+    }
 }
 
 // API Helper
