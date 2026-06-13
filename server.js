@@ -32,8 +32,8 @@ if (!fs.existsSync(dashboardPath)) {
 }
 app.use(express.static(dashboardPath, { index: false }));
 
-// Protect the main HTML entry point with Basic Auth
-app.get('/', dashboardAuth, (req, res) => {
+// Main UI - public, authentication is handled in frontend with JWT
+app.get('/', (req, res) => {
     res.sendFile(path.join(dashboardPath, 'index.html'));
 });
 
@@ -41,9 +41,9 @@ app.get('/', dashboardAuth, (req, res) => {
 app.use('/api/accounts', adminAuth, accountRoutes);
 app.use('/api/messages', accountAuth, messageRoutes);
 app.use('/api/system', adminAuth, systemRoutes);
-app.use('/api/flows', flowRoutes);
-app.use('/api/chats', chatRoutes);
-app.use('/api/agents', agentRoutes);
+app.use('/api/flows', flowRoutes); // webhook/test endpoints inside flowRoutes need careful auth checking
+app.use('/api/chats', accountAuth, chatRoutes);
+app.use('/api/agents', agentRoutes); // login is public, rest are protected by adminAuth internally
 
 // Ensure storage directories exist
 const setupStorage = () => {

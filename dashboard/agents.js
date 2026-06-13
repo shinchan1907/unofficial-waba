@@ -65,7 +65,7 @@ function renderAgentsTable() {
     
     tbody.innerHTML = allAgents.map(agent => `
         <tr>
-            <td><strong>${agent.name}</strong><br><small class="text-muted">${agent.email}</small></td>
+            <td><strong>${agent.name}</strong><br><small class="text-muted">@${agent.username}</small></td>
             <td><span style="background: var(--bg-hover); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">${agent.role}</span></td>
             <td>${new Date(agent.createdAt).toLocaleDateString()}</td>
             <td>
@@ -77,22 +77,24 @@ function renderAgentsTable() {
 
 function showAddAgentModal() {
     document.getElementById('newAgentName').value = '';
-    document.getElementById('newAgentEmail').value = '';
+    document.getElementById('newAgentUsername').value = '';
+    document.getElementById('newAgentPassword').value = '';
     document.getElementById('newAgentRole').value = 'Agent';
     document.getElementById('addAgentModal').style.display = 'flex';
 }
 
 async function submitAddAgent() {
     const name = document.getElementById('newAgentName').value.trim();
-    const email = document.getElementById('newAgentEmail').value.trim();
+    const username = document.getElementById('newAgentUsername').value.trim();
+    const password = document.getElementById('newAgentPassword').value.trim();
     const role = document.getElementById('newAgentRole').value;
     
-    if (!name) return alert('Agent Name is required');
+    if (!name || !username || !password) return alert('Name, Username, and Password are required');
     
     try {
         const res = await api('/api/agents', {
             method: 'POST',
-            body: JSON.stringify({ name, email, role })
+            body: JSON.stringify({ name, username, password, role })
         });
         
         if (res.success) {

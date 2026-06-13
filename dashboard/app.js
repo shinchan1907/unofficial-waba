@@ -2,13 +2,68 @@ const API_BASE = '/api';
 const ADMIN_KEY = 'my-super-secret-api-key';
 let isTyping = false;
 
+// Check authentication state on load
+let currentUser = null;
+
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
     initNavigation();
-    fetchSystemData();
     
     document.addEventListener('focusin', (e) => { if (e.target.tagName === 'INPUT') isTyping = true; });
     document.addEventListener('focusout', (e) => { if (e.target.tagName === 'INPUT') isTyping = false; });
 });
+
+function checkAuth() {
+    const token = localStorage.getItem('jwtToken');
+    const userStr = localStorage.getItem('currentUser');
+    
+    if (token && userStr) {
+        currentUser = JSON.parse(userStr);
+        document.getElementById('login-overlay').style.display = 'none';
+        
+        // Hide Admin elements if the user is just an Agent
+        if (currentUser.role !== 'Admin') {
+            const navAgents = document.getElementById('nav-agents');
+            if (navAgents) navAgents.style.display = 'none';
+            
+            const agentSelectorContainer = document.getElementById('global-agent-select')?.parentElement;
+            if (agentSelectorContainer) agentSelectorContainer.style.display = 'none';
+            
+            // Set the agent name forcefully
+            localStorage.setItem('agentName', currentUser.name);
+            if (typeof currentAgentName !== 'undefined') currentAgentName = currentUser.name;
+        }
+        
+        fetchSystemData();
+    } else {
+        document.getElementById('login-overlay').style.display = 'flex';
+    }
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    
+    try {
+        const res = await fetch('/api/agents/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            localStorage.setItem('jwtToken', data.token);
+            localStorage.setItem('currentUser', JSON.stringify(data.agent));
+            window.location.reload();
+        } else {
+            alert('Login failed: ' + data.error);
+        }
+    } catch (err) {
+        alert('Connection error during login');
+    }
+}
 
 function initNavigation() {
     const navLinks = document.querySelectorAll('.nav-menu a');
@@ -50,13 +105,25 @@ function initNavigation() {
 
 // API Helper
 async function api(path, options = {}) {
+    const token = localStorage.getItem('jwtToken');
     const defaultOptions = {
         headers: {
-            'x-api-key': 'my-super-secret-api-key', // Hardcoded for dashboard demo purposes, should ideally be dynamic
             'Content-Type': 'application/json'
         }
     };
+    if (token) {
+        defaultOptions.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const res = await fetch(path, { ...defaultOptions, ...options });
+    
+    if (res.status === 401) {
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('currentUser');
+        window.location.reload();
+        return { success: false, error: 'Session expired' };
+    }
+    
     return res.json();
 }
 
