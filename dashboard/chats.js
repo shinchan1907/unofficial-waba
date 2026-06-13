@@ -95,10 +95,13 @@ function renderContactList() {
         
         const isActive = activeChatPhone === phone;
         
+        const displayName = chat.pushName ? chat.pushName : '+' + phone;
+        const subName = chat.pushName ? ` <span style="font-size: 0.75rem; color: var(--text-muted);">+${phone}</span>` : '';
+        
         return `
             <div onclick="selectChat('${phone}')" style="padding: 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; background: ${isActive ? '#f1f5f9' : '#fff'};">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <strong style="font-size: 0.95rem;">${phone}</strong>
+                    <strong style="font-size: 0.95rem;">${displayName}${subName}</strong>
                     <span style="font-size: 0.75rem; color: var(--text-muted);">${timeStr}</span>
                 </div>
                 <div style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -122,11 +125,13 @@ function selectChat(phone) {
 }
 
 function renderMessages(phone) {
-    document.getElementById('chat-active-contact').textContent = '+' + phone;
+    const chat = allChats[phone];
+    const headerTitle = chat && chat.pushName ? `${chat.pushName} (+${phone})` : '+' + phone;
+    
+    document.getElementById('chat-active-contact').textContent = headerTitle;
     document.getElementById('chat-input-area').style.display = 'flex';
     document.getElementById('chat-status-toggle').style.display = 'flex';
     
-    const chat = allChats[phone];
     const isHuman = chat && chat.status === 'human';
     
     const toggle = document.getElementById('chat-human-toggle');

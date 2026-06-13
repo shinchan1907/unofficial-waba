@@ -11,6 +11,8 @@ const handleIncomingMessage = async (accountId, message) => {
         const sender = message.key.remoteJid.split('@')[0];
         if (sender === 'status') return; // Ignore WhatsApp status updates
         
+        const pushName = message.pushName || '';
+        
         const msgType = Object.keys(message.message)[0];
         
         let text = '';
@@ -29,7 +31,7 @@ const handleIncomingMessage = async (accountId, message) => {
         }
 
         const chatController = require('../controllers/chatController');
-        chatController.logMessage(accountId, sender, 'user', text, msgType);
+        chatController.logMessage(accountId, sender, 'user', text, msgType, { pushName });
 
         // Log the received message to the UI
         logService.writeLog(accountId, 'MESSAGE_RECEIVED', `From: ${sender}`);
@@ -52,6 +54,7 @@ const handleIncomingMessage = async (accountId, message) => {
             event: 'message_received',
             account: accountId,
             sender: sender,
+            pushName: pushName,
             text: text,
             messageId: message.key.id,
             messageType: msgType,

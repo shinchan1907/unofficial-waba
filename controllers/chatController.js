@@ -7,7 +7,7 @@ const getChatFile = (accountId) => {
     return path.join(path.dirname(config.storagePaths.accounts), `chats_${accountId}.json`);
 };
 
-exports.logMessage = (accountId, phone, senderType, text, messageType = 'text') => {
+exports.logMessage = (accountId, phone, senderType, text, messageType = 'text', options = {}) => {
     try {
         const file = getChatFile(accountId);
         let chats = {};
@@ -17,11 +17,17 @@ exports.logMessage = (accountId, phone, senderType, text, messageType = 'text') 
         }
         
         if (!chats[phone]) {
-            chats[phone] = { messages: [], lastUpdate: Date.now() };
+            chats[phone] = { messages: [], lastUpdate: Date.now(), pushName: options.pushName || '' };
+        }
+        
+        // Update pushName if available and not set
+        if (options.pushName && !chats[phone].pushName) {
+            chats[phone].pushName = options.pushName;
         }
         
         chats[phone].messages.push({
-            sender: senderType, // 'bot' or 'user'
+            sender: senderType, // 'bot', 'user', or 'agent'
+            agentName: options.agentName || null,
             text: text,
             type: messageType,
             timestamp: new Date().toISOString()
