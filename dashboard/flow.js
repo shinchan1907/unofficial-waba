@@ -192,7 +192,7 @@ function getNodeTemplate(name) {
                     <div class="box">
                         <div>
                             <label>Condition Type</label>
-                            <select name="conditionType" df-conditionType>
+                            <select name="conditionType" df-conditionType onchange="this.parentElement.nextElementSibling.style.display = this.value === 'payload' ? 'block' : 'none'; this.parentElement.nextElementSibling.nextElementSibling.style.display = this.value === 'payload' ? 'block' : 'none';">
                                 <option value="payload">Payload Field</option>
                                 <option value="replied">Has Replied?</option>
                                 <option value="seen">Has Seen/Read?</option>
@@ -282,6 +282,53 @@ function clearFlow() {
     if(confirm('Are you sure you want to clear the flow?')) {
         editor.clear();
     }
+}
+
+async function testFlow() {
+    if (!currentFlowAccount) {
+        return alert("Please select an account first.");
+    }
+    
+    const exportdata = editor.export();
+    const flowData = exportdata.drawflow.Home.data;
+    const nodes = Object.values(flowData);
+    const hasIncoming = nodes.find(n => n.name === 'incoming');
+    
+    let payload = {};
+    if (hasIncoming) {
+        payload = {
+            event: 'message_received',
+            sender: '1234567890',
+            text: 'Hello, this is a test message from dashboard!'
+        };
+    } else {
+        payload = {
+            phone: '1234567890',
+            name: 'Test User',
+            status: 'paid'
+        };
+    }
+
+    const btn = document.getElementById('btn-test');
+    btn.innerText = 'Testing...';
+    
+    try {
+        const response = await fetch(`/api/flows/webhook/${currentFlowAccount}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Test payload sent! Check the Overview or Logs to see execution.');
+        } else {
+            alert('Error testing flow: ' + result.error);
+        }
+    } catch (error) {
+        alert('Failed to send test payload: ' + error.message);
+    }
+    btn.innerText = 'Test Flow';
 }
 
 async function saveFlow() {
