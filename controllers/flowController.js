@@ -35,10 +35,34 @@ exports.saveFlow = (req, res) => {
     res.json({ success: true });
 };
 
+exports.getLatestWebhook = async (req, res) => {
+    try {
+        const { accountId } = req.params;
+        const payloadFile = path.join(path.dirname(config.storagePaths.flows), `latest_webhook_${accountId}.json`);
+        if (fs.existsSync(payloadFile)) {
+            const payload = JSON.parse(fs.readFileSync(payloadFile, 'utf8'));
+            res.json({ success: true, payload });
+        } else {
+            res.json({ success: true, payload: null });
+        }
+    } catch (error) {
+        logger.error({ error: error.message }, 'Failed to get latest webhook');
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+};
+
 // Flow Execution Engine
 exports.executeWebhook = async (req, res) => {
     const { accountId } = req.params;
     const payload = req.body;
+    
+    // Save payload for debugging / UI visibility
+    try {
+        const payloadFile = path.join(path.dirname(config.storagePaths.flows), `latest_webhook_${accountId}.json`);
+        fs.writeFileSync(payloadFile, JSON.stringify(payload, null, 2));
+    } catch(e) {
+        // ignore write errors here
+    }
     
     const flows = readFlows();
     const flowData = flows[accountId];

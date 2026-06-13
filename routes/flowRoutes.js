@@ -5,6 +5,7 @@ const { adminAuth } = require('../middleware/authMiddleware');
 
 router.get('/:accountId', adminAuth, flowController.getFlow);
 router.post('/:accountId', adminAuth, flowController.saveFlow);
+router.get('/webhook/latest/:accountId', adminAuth, flowController.getLatestWebhook);
 router.post('/webhook/:accountId', flowController.executeWebhook);
 
 module.exports = router;

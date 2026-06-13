@@ -95,7 +95,9 @@ function getNodeTemplate(name) {
                         <span class="node-icon" style="background:#f59e0b">⚡</span> Webhook Trigger
                     </div>
                     <div class="box">
-                        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0;">Maps incoming JSON payload.</p>
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">Maps incoming JSON payload.</p>
+                        <button type="button" class="btn btn-secondary" onclick="fetchLatestWebhook(this)" style="padding:4px 8px; font-size:0.7rem; width:100%; margin-bottom:8px;">Fetch Last Payload</button>
+                        <pre class="payload-display" style="display:none; background:#f1f5f9; padding:8px; border-radius:4px; font-size:0.65rem; overflow-x:auto; max-height:100px; margin-bottom:8px; color:#334155; white-space:pre-wrap; word-break:break-all;"></pre>
                         <div>
                             <label>Phone Field Key (Required)</label>
                             <input type="text" name="phoneField" df-phoneField placeholder="e.g. phone" value="phone">
@@ -281,6 +283,27 @@ async function onFlowAccountChange(e) {
 function clearFlow() {
     if(confirm('Are you sure you want to clear the flow?')) {
         editor.clear();
+    }
+}
+
+async function fetchLatestWebhook(btn) {
+    if (!currentFlowAccount) return alert("Please select an account first.");
+    
+    btn.innerText = "Fetching...";
+    try {
+        const res = await api(`/api/flows/webhook/latest/${currentFlowAccount}`);
+        const pre = btn.nextElementSibling;
+        if (res.success && res.payload) {
+            pre.textContent = JSON.stringify(res.payload, null, 2);
+            pre.style.display = 'block';
+            btn.innerText = "Refresh Payload";
+        } else {
+            alert("No payload found! Please send a test payload from your source first.");
+            btn.innerText = "Fetch Last Payload";
+        }
+    } catch(e) {
+        alert("Failed to fetch payload.");
+        btn.innerText = "Fetch Last Payload";
     }
 }
 
