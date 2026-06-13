@@ -47,9 +47,11 @@ async function onChatAccountChange(e) {
         document.getElementById('chat-contacts-list').innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">Select an account to load chats.</div>';
         document.getElementById('chat-messages-container').innerHTML = '';
         document.getElementById('chat-active-contact').textContent = 'Select a conversation';
+        document.getElementById('chat-input-area').style.display = 'none';
         return;
     }
     
+    document.getElementById('chat-input-area').style.display = 'none';
     await loadChats(currentChatAccount, true);
 }
 
@@ -121,6 +123,7 @@ function selectChat(phone) {
 
 function renderMessages(phone) {
     document.getElementById('chat-active-contact').textContent = '+' + phone;
+    document.getElementById('chat-input-area').style.display = 'flex';
     
     const container = document.getElementById('chat-messages-container');
     const chat = allChats[phone];
@@ -157,5 +160,52 @@ function renderMessages(phone) {
     
     if (isScrolledToBottom) {
         container.scrollTop = container.scrollHeight;
+    }
+}
+
+function handleChatKeyPress(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatReply();
+    }
+}
+
+async function sendChatReply() {
+    const input = document.getElementById('chat-reply-input');
+    const text = input.value.trim();
+    
+    if (!text || !currentChatAccount || !activeChatPhone) return;
+    
+    input.value = '';
+    
+    try {
+        const res = await api('/api/messages/send', {
+            method: 'POST',
+            body: JSON.stringify({
+                account: currentChatAccount,
+                number: activeChatPhone,
+                message: text
+            })
+        });
+        
+        if (res.success) {
+            // Optimistically add to UI
+            if (!allChats[activeChatPhone]) allChats[activeChatPhone] = { messages: [] };
+            allChats[activeChatPhone].messages.push({
+                sender: 'bot',
+                text: text,
+                type: 'text',
+                timestamp: new Date().toISOString()
+            });
+            allChats[activeChatPhone].lastUpdate = Date.now();
+            renderContactList();
+            renderMessages(activeChatPhone);
+        } else {
+            alert('Failed to send message: ' + res.error);
+            input.value = text; // Restore text
+        }
+    } catch(e) {
+        alert('Error sending message');
+        input.value = text;
     }
 }
