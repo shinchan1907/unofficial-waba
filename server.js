@@ -9,6 +9,7 @@ const { dashboardAuth, adminAuth, accountAuth } = require('./middleware/authMidd
 const accountRoutes = require('./routes/accountRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const systemRoutes = require('./routes/systemRoutes');
+const flowRoutes = require('./routes/flowRoutes');
 const queueService = require('./services/queueService');
 
 const app = express();
@@ -38,6 +39,7 @@ app.get('/', dashboardAuth, (req, res) => {
 app.use('/api/accounts', adminAuth, accountRoutes);
 app.use('/api/messages', accountAuth, messageRoutes);
 app.use('/api/system', adminAuth, systemRoutes);
+app.use('/api/flows', flowRoutes);
 
 // Ensure storage directories exist
 const setupStorage = () => {
@@ -54,6 +56,9 @@ const setupStorage = () => {
     }
     if (!fs.existsSync(config.storagePaths.logs)) {
         fs.writeFileSync(config.storagePaths.logs, JSON.stringify([], null, 2));
+    }
+    if (!fs.existsSync(config.storagePaths.flows)) {
+        fs.writeFileSync(config.storagePaths.flows, JSON.stringify({}, null, 2));
     }
 };
 

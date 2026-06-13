@@ -10,7 +10,8 @@ module.exports = {
         storage: path.join(__dirname, '../storage'),
         accounts: path.join(__dirname, '../storage/accounts.json'),
         queue: path.join(__dirname, '../storage/queue.json'),
-        logs: path.join(__dirname, '../storage/logs.json')
+        logs: path.join(__dirname, '../storage/logs.json'),
+        flows: path.join(__dirname, '../storage/flows.json')
     },
     dashboard: {
         username: process.env.DASHBOARD_USERNAME || 'admin',

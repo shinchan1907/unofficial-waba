@@ -1,16 +1,15 @@
 const RAW_SHEET = 'Sheet1';
-const CRM_SHEET = 'Formatted';
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('WhatsApp CRM')
-    .addItem('Open Dashboard', 'showSidebar')
+    .createMenu('WhatsApp Flows')
+    .addItem('Settings', 'showSidebar')
     .addToUi();
 }
 
 function showSidebar() {
   const html = HtmlService.createHtmlOutputFromFile('Sidebar')
-    .setTitle('WhatsApp CRM Settings')
+    .setTitle('WhatsApp Flow Trigger Settings')
     .setWidth(300);
   SpreadsheetApp.getUi().showSidebar(html);
 }
@@ -24,233 +23,107 @@ function saveSettings(data) {
   return true;
 }
 
-function initializeCRM() {
+function initializeTrigger() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(RAW_SHEET);
   
-  // Create Formatted tab if not exists
-  let crmSheet = ss.getSheetByName(CRM_SHEET);
-  const headers = ['Date', 'Form Name', 'Platform', 'Name', 'Phone', 'Email', 'Qualification', 'Occupation', 'WA Status', 'Message ID', 'Last Updated'];
-  
-  if (!crmSheet) {
-    crmSheet = ss.insertSheet(CRM_SHEET);
-  }
-  
-  // Ensure headers exist
-  const firstRow = crmSheet.getRange(1, 1, 1, headers.length).getValues()[0];
-  if (!firstRow[0] || firstRow[0] === '') {
-    crmSheet.getRange(1, 1, 1, headers.length).setValues([headers])
-      .setFontWeight('bold')
-      .setBackground('#f3f4f6');
-    crmSheet.setFrozenRows(1);
-    crmSheet.autoResizeColumns(1, headers.length);
+  if (!sheet) {
+    return "Error: Sheet named '" + RAW_SHEET + "' not found.";
   }
 
   // Setup Triggers
   const triggers = ScriptApp.getProjectTriggers();
   let hasOnChange = false;
-  let hasHourly = false;
 
   for (let i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'processNewLeads') hasOnChange = true;
-    if (triggers[i].getHandlerFunction() === 'checkFollowUps') hasHourly = true;
+    if (triggers[i].getHandlerFunction() === 'triggerWebhook') {
+      hasOnChange = true;
+    } else {
+      // Clean up old triggers
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
   }
 
   if (!hasOnChange) {
-    ScriptApp.newTrigger('processNewLeads').forSpreadsheet(ss).onChange().create();
+    ScriptApp.newTrigger('triggerWebhook').forSpreadsheet(ss).onChange().create();
   }
-  if (!hasHourly) {
-    ScriptApp.newTrigger('checkFollowUps').timeBased().everyHours(1).create();
+  
+  // Set initial last processed row
+  const props = PropertiesService.getDocumentProperties();
+  if (!props.getProperty('lastProcessedRow')) {
+    props.setProperty('lastProcessedRow', sheet.getLastRow() > 1 ? sheet.getLastRow().toString() : '1');
   }
 
-  return "CRM Initialized! Formatted tab created and background triggers actvated.";
+  return "Trigger Initialized! Listening for new rows.";
 }
 
-function sendWhatsAppMessage(number, message, mediaUrl = null) {
-  const props = getSettings();
-  if (!props.apiUrl || !props.apiKey || !props.accountId) return null;
-
-  const payload = {
-    account: props.accountId,
-    number: String(number).replace(/[^0-9]/g, ''),
-    message: message
-  };
-
-  if (mediaUrl && mediaUrl.trim() !== '') {
-    const cleanUrl = mediaUrl.trim();
-    const ext = cleanUrl.split('.').pop().toLowerCase();
-    const isVideo = ext.includes('mp4') || ext.includes('mov') || ext.includes('avi');
-    payload.media = {
-      type: isVideo ? 'video' : 'image',
-      url: cleanUrl
-    };
+function triggerWebhook(e) {
+  // Only trigger on INSERT_ROW or generic change
+  if (e && e.changeType && !['INSERT_ROW', 'EDIT'].includes(e.changeType)) {
+    return;
   }
 
+  const props = PropertiesService.getDocumentProperties();
+  const webhookUrl = props.getProperty('webhookUrl');
+  
+  if (!webhookUrl) return; // No webhook configured
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(RAW_SHEET);
+  if (!sheet) return;
+
+  const lastRow = sheet.getLastRow();
+  let lastProcessedRow = parseInt(props.getProperty('lastProcessedRow') || '1', 10);
+  
+  if (lastRow <= lastProcessedRow) {
+    return; // No new rows
+  }
+
+  // Get Headers
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  
+  // Get all new rows
+  const newRows = sheet.getRange(lastProcessedRow + 1, 1, lastRow - lastProcessedRow, sheet.getLastColumn()).getValues();
+
+  // Process each new row
+  for (let i = 0; i < newRows.length; i++) {
+    const row = newRows[i];
+    
+    // Create JSON payload
+    let payload = {};
+    for (let j = 0; j < headers.length; j++) {
+      let key = headers[j];
+      if (key) {
+        // Clean key name slightly (optional)
+        key = String(key).toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        payload[key] = row[j];
+      }
+    }
+    
+    // Add raw original data mapping
+    payload.raw_data = {};
+    for (let j = 0; j < headers.length; j++) {
+      if (headers[j]) payload.raw_data[headers[j]] = row[j];
+    }
+
+    sendWebhook(webhookUrl, payload);
+  }
+
+  // Update last processed row
+  props.setProperty('lastProcessedRow', lastRow.toString());
+}
+
+function sendWebhook(url, payload) {
   const options = {
     method: 'post',
     contentType: 'application/json',
-    headers: { 'x-api-key': props.apiKey },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
 
   try {
-    const res = UrlFetchApp.fetch(`${props.apiUrl}/messages/send`, options);
-    const data = JSON.parse(res.getContentText());
-    return data.msgId || "SENT";
+    UrlFetchApp.fetch(url, options);
   } catch (e) {
-    Logger.log("Error: " + e.message);
-    return null;
-  }
-}
-
-function processNewLeads() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const rawSheet = ss.getSheetByName(RAW_SHEET);
-  const crmSheet = ss.getSheetByName(CRM_SHEET);
-  if (!rawSheet || !crmSheet) return;
-
-  const rawData = rawSheet.getDataRange().getValues();
-  const crmData = crmSheet.getDataRange().getValues();
-  
-  const rawHeaders = rawData[0];
-  const crmPhones = crmData.map(row => String(row[4]).replace(/[^0-9]/g, '')); // Index 4 is Phone
-
-  const props = getSettings();
-  const template = props.initialTemplate || "Hi {name}, thanks for reaching out!";
-
-  for (let i = 1; i < rawData.length; i++) {
-    const row = rawData[i];
-    
-    // Map columns from raw sheet dynamically based on headers
-    const getVal = (colName) => {
-      const idx = rawHeaders.indexOf(colName);
-      return idx > -1 ? row[idx] : '';
-    };
-
-    const date = getVal('created_time');
-    const formName = getVal('form_name');
-    const platform = getVal('platform');
-    const qualification = getVal('your_qualification_?');
-    const occupation = getVal('your_occupation_?');
-    const name = getVal('full_name');
-    const phone = getVal('phone_number');
-    const email = getVal('email');
-
-    if (!phone) continue;
-
-    const cleanPhone = String(phone).replace(/[^0-9]/g, '');
-
-    // Check if lead already exists in Formatted tab
-    if (!crmPhones.includes(cleanPhone) && cleanPhone !== '') {
-      
-      // Personalize message
-      const personalizedMsg = template.replace(/{name}/gi, name || "there");
-      
-      // Send WA Message
-      const msgId = sendWhatsAppMessage(cleanPhone, personalizedMsg, props.initialMediaUrl);
-      const status = msgId ? 'SENT_INITIAL' : 'FAILED';
-      
-      // Append to Formatted Tab
-      // ['Date', 'Form Name', 'Platform', 'Name', 'Phone', 'Email', 'Qualification', 'Occupation', 'WA Status', 'Message ID', 'Last Updated']
-      crmSheet.appendRow([
-        date || new Date().toISOString(),
-        formName,
-        platform,
-        name,
-        cleanPhone,
-        email,
-        qualification,
-        occupation,
-        status,
-        msgId || '',
-        new Date().toISOString()
-      ]);
-      
-      // Add to our local array to prevent duplicates in same run
-      crmPhones.push(cleanPhone);
-    }
-  }
-}
-
-function checkFollowUps() {
-  const props = getSettings();
-  if (props.enableFollowUps !== 'true') return; // Exit if disabled
-
-  const crmSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CRM_SHEET);
-  if (!crmSheet) return;
-
-  const data = crmSheet.getDataRange().getValues();
-  const template = props.followupTemplate;
-  if (!template) return;
-
-  const now = new Date();
-
-  for (let i = 1; i < data.length; i++) {
-    const status = data[i][8]; // WA Status
-    const phone = data[i][4]; // Phone
-    const lastUpdateStr = data[i][10]; // Last Updated
-    const name = data[i][3]; // Name
-
-    if (status === 'SENT_INITIAL' && lastUpdateStr) {
-      const lastUpdate = new Date(lastUpdateStr);
-      const hoursDiff = Math.abs(now - lastUpdate) / 36e5;
-
-      if (hoursDiff >= 3) {
-        const personalizedMsg = template.replace(/{name}/gi, name || "there");
-        const msgId = sendWhatsAppMessage(phone, personalizedMsg, props.followupMediaUrl);
-        
-        if (msgId) {
-          crmSheet.getRange(i + 1, 9).setValue('FOLLOWUP_SENT');
-          crmSheet.getRange(i + 1, 10).setValue(msgId);
-          crmSheet.getRange(i + 1, 11).setValue(new Date().toISOString());
-        }
-      }
-    }
-  }
-}
-
-function doPost(e) {
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const eventType = payload.event;
-    
-    const crmSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CRM_SHEET);
-    if (!crmSheet) return ContentService.createTextOutput('No CRM sheet');
-
-    const data = crmSheet.getDataRange().getValues();
-
-    if (eventType === 'message_status' && payload.status === 'READ') {
-      const recipient = payload.recipient;
-      for (let i = 1; i < data.length; i++) {
-        if (String(data[i][4]).includes(recipient) && data[i][8] === 'SENT_INITIAL') {
-          crmSheet.getRange(i + 1, 9).setValue('READ');
-          crmSheet.getRange(i + 1, 11).setValue(new Date().toISOString());
-        }
-      }
-    }
-
-    if (eventType === 'message_received') {
-      const sender = payload.sender;
-      for (let i = 1; i < data.length; i++) {
-        if (String(data[i][4]).includes(sender)) {
-          crmSheet.getRange(i + 1, 9).setValue('REPLIED');
-          crmSheet.getRange(i + 1, 11).setValue(new Date().toISOString());
-        }
-      }
-
-      // Auto Responder logic
-      const now = new Date();
-      const timeAsFloat = now.getHours() + (now.getMinutes() / 60);
-      if (timeAsFloat >= 18.0 || timeAsFloat <= 9.16) {
-        const offHoursMsg = getSettings().offHoursReply;
-        if (offHoursMsg) {
-          sendWhatsAppMessage(sender, offHoursMsg);
-        }
-      }
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({error: error.message})).setMimeType(ContentService.MimeType.JSON);
+    Logger.log("Webhook failed: " + e.message);
   }
 }

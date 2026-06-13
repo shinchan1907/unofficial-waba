@@ -6,8 +6,7 @@
       body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; color: #333; }
       .form-group { margin-bottom: 15px; }
       label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; }
-      input, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
-      textarea { resize: vertical; height: 80px; }
+      input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
       button { background-color: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 10px; transition: 0.2s; }
       button:hover { background-color: #059669; }
       .btn-secondary { background-color: #3b82f6; }
@@ -19,90 +18,44 @@
   </head>
   <body>
     <div class="header">
-      <h2 style="margin:0; color: #10b981;">WhatsApp CRM</h2>
-      <p style="margin:5px 0 0 0; font-size:12px; color:#666;">Configuration Dashboard</p>
+      <h2 style="margin:0; color: #10b981;">WhatsApp Flows</h2>
+      <p style="margin:5px 0 0 0; font-size:12px; color:#666;">Trigger Webhook on New Row</p>
     </div>
     
-    <button class="btn-secondary" onclick="initialize()" id="btnInit">Initialize CRM & Triggers</button>
-    <p style="font-size: 11px; color: #666; text-align: center; margin-top: -5px;">Creates the Formatted tab & automation triggers</p>
+    <div class="form-group">
+      <label>Flow Webhook URL</label>
+      <input type="text" id="webhookUrl" placeholder="http://YOUR_SERVER/api/flows/webhook/ACCOUNT_ID">
+    </div>
+
+    <button onclick="saveSettings()" id="btnSave">Save Webhook</button>
 
     <hr>
 
-    <div class="form-group">
-      <label>WA Server API URL</label>
-      <input type="text" id="apiUrl" placeholder="http://YOUR_VPS_IP/api">
-    </div>
+    <button class="btn-secondary" onclick="initialize()" id="btnInit">Initialize Trigger</button>
+    <p style="font-size: 11px; color: #666; text-align: center; margin-top: -5px;">Activates the listener for new rows on Sheet1</p>
 
-    <div class="form-group">
-      <label>API Key</label>
-      <input type="password" id="apiKey" placeholder="Your Master API Key">
-    </div>
-
-    <div class="form-group">
-      <label>Account ID</label>
-      <input type="text" id="accountId" placeholder="e.g. personal_phone">
-    </div>
-
-    <hr>
-
-    <div class="form-group">
-      <label>Initial Message Template</label>
-      <div style="font-size:11px; color:#666; margin-bottom:4px;">Use {name} to personalize with the lead's name.</div>
-      <textarea id="initialTemplate" placeholder="Hi {name}, thanks for reaching out!"></textarea>
-      <input type="text" id="initialMediaUrl" placeholder="Optional: Image/Video URL" style="margin-top: 5px;">
-    </div>
-
-    <div class="form-group">
-      <label style="display:flex; align-items:center; gap:5px;">
-        <input type="checkbox" id="enableFollowUps" style="width:auto; margin:0;"> Enable 3-Hour Follow-ups
-      </label>
-      <div style="font-size:11px; color:#666; margin-bottom:4px;">Will only trigger if message is NOT read or replied to.</div>
-      <textarea id="followupTemplate" placeholder="Hi {name}, just checking if you saw my last message!" style="margin-top: 5px;"></textarea>
-      <input type="text" id="followupMediaUrl" placeholder="Optional: Image/Video URL" style="margin-top: 5px;">
-    </div>
-
-    <div class="form-group">
-      <label>Non-Working Hours Auto-Reply<br>(6:00 PM to 9:10 AM)</label>
-      <textarea id="offHoursReply" placeholder="We are currently away. We will reply at 9:10 AM."></textarea>
-    </div>
-
-    <button onclick="saveSettings()" id="btnSave">Save Settings</button>
     <div id="status" class="status"></div>
 
     <script>
       // Load settings on boot
       google.script.run.withSuccessHandler(function(settings) {
         if(settings) {
-          document.getElementById('apiUrl').value = settings.apiUrl || '';
-          document.getElementById('apiKey').value = settings.apiKey || '';
-          document.getElementById('accountId').value = settings.accountId || '';
-          document.getElementById('initialTemplate').value = settings.initialTemplate || '';
-          document.getElementById('initialMediaUrl').value = settings.initialMediaUrl || '';
-          document.getElementById('enableFollowUps').checked = settings.enableFollowUps === 'true';
-          document.getElementById('followupTemplate').value = settings.followupTemplate || '';
-          document.getElementById('followupMediaUrl').value = settings.followupMediaUrl || '';
-          document.getElementById('offHoursReply').value = settings.offHoursReply || '';
+          document.getElementById('webhookUrl').value = settings.webhookUrl || '';
         }
       }).getSettings();
 
       function saveSettings() {
         document.getElementById('btnSave').innerText = 'Saving...';
         const data = {
-          apiUrl: document.getElementById('apiUrl').value,
-          apiKey: document.getElementById('apiKey').value,
-          accountId: document.getElementById('accountId').value,
-          initialTemplate: document.getElementById('initialTemplate').value,
-          initialMediaUrl: document.getElementById('initialMediaUrl').value,
-          enableFollowUps: document.getElementById('enableFollowUps').checked ? 'true' : 'false',
-          followupTemplate: document.getElementById('followupTemplate').value,
-          followupMediaUrl: document.getElementById('followupMediaUrl').value,
-          offHoursReply: document.getElementById('offHoursReply').value
+          webhookUrl: document.getElementById('webhookUrl').value,
+          // Reset processed row to allow reprocessing if needed by users
+          // Optional, but usually we just want to save the URL.
         };
         
         google.script.run.withSuccessHandler(function() {
-          document.getElementById('btnSave').innerText = 'Save Settings';
+          document.getElementById('btnSave').innerText = 'Save Webhook';
           const stat = document.getElementById('status');
-          stat.innerText = 'Settings saved successfully!';
+          stat.innerText = 'Webhook saved successfully!';
           setTimeout(() => stat.innerText = '', 3000);
         }).saveSettings(data);
       }
@@ -110,11 +63,11 @@
       function initialize() {
         document.getElementById('btnInit').innerText = 'Initializing...';
         google.script.run.withSuccessHandler(function(msg) {
-          document.getElementById('btnInit').innerText = 'Initialize CRM & Triggers';
+          document.getElementById('btnInit').innerText = 'Initialize Trigger';
           const stat = document.getElementById('status');
           stat.innerText = msg;
           setTimeout(() => stat.innerText = '', 5000);
-        }).initializeCRM();
+        }).initializeTrigger();
       }
     </script>
   </body>

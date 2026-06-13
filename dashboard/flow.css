@@ -1,0 +1,124 @@
+.drag-drawflow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: grab;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.drag-drawflow:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.node-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+}
+
+/* Drawflow Overrides */
+.drawflow {
+    background-size: 20px 20px;
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+}
+
+.drawflow .drawflow-node {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 0;
+    width: 250px;
+}
+
+.drawflow .drawflow-node.selected {
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.drawflow .drawflow-node .title-box {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    border-radius: 12px 12px 0 0;
+}
+
+.drawflow .drawflow-node .box {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.drawflow .drawflow-node .box input, 
+.drawflow .drawflow-node .box select, 
+.drawflow .drawflow-node .box textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    outline: none;
+}
+
+.drawflow .drawflow-node .box input:focus, 
+.drawflow .drawflow-node .box select:focus, 
+.drawflow .drawflow-node .box textarea:focus {
+    border-color: var(--primary);
+}
+
+.drawflow .drawflow-node .box textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.drawflow .drawflow-node .box label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    display: block;
+}
+
+.drawflow .connection .main-path {
+    stroke: #94a3b8;
+    stroke-width: 3px;
+}
+
+.drawflow .connection .main-path:hover {
+    stroke: var(--primary);
+}
+
+.drawflow .drawflow-node .input, 
+.drawflow .drawflow-node .output {
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border: 2px solid #94a3b8;
+    border-radius: 50%;
+}
+
+.drawflow .drawflow-node .input:hover, 
+.drawflow .drawflow-node .output:hover {
+    border-color: var(--primary);
+    background: var(--primary);
+}
