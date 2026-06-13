@@ -116,6 +116,13 @@ exports.executeWebhook = async (req, res) => {
     // Clean phone number
     context.phone = String(context.phone).replace(/[^0-9]/g, '');
 
+    // Check if Human Agent has taken over this chat
+    const chatController = require('./chatController');
+    if (chatController.isBotPaused(accountId, context.phone)) {
+        logService.writeLog(accountId, 'FLOW_SKIPPED', `Bot paused for ${context.phone} (Human Agent Mode)`);
+        return;
+    }
+
     // Start execution
     executeNextNodes(flowData, triggerNode.outputs, context);
 };

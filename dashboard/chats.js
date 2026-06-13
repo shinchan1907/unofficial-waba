@@ -124,9 +124,24 @@ function selectChat(phone) {
 function renderMessages(phone) {
     document.getElementById('chat-active-contact').textContent = '+' + phone;
     document.getElementById('chat-input-area').style.display = 'flex';
+    document.getElementById('chat-status-toggle').style.display = 'flex';
+    
+    const chat = allChats[phone];
+    const isHuman = chat && chat.status === 'human';
+    
+    const toggle = document.getElementById('chat-human-toggle');
+    const label = document.getElementById('chat-status-label');
+    toggle.checked = isHuman;
+    
+    if (isHuman) {
+        label.textContent = "Agent Mode (Bot Paused)";
+        label.style.color = "var(--primary)";
+    } else {
+        label.textContent = "Bot Active";
+        label.style.color = "var(--text-muted)";
+    }
     
     const container = document.getElementById('chat-messages-container');
-    const chat = allChats[phone];
     
     if (!chat || !chat.messages || chat.messages.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">No messages</div>';
@@ -160,6 +175,40 @@ function renderMessages(phone) {
     
     if (isScrolledToBottom) {
         container.scrollTop = container.scrollHeight;
+    }
+}
+
+async function toggleAgentMode() {
+    if (!currentChatAccount || !activeChatPhone) return;
+    
+    const toggle = document.getElementById('chat-human-toggle');
+    const label = document.getElementById('chat-status-label');
+    const newStatus = toggle.checked ? 'human' : 'bot';
+    
+    try {
+        const res = await api(`/api/chats/${currentChatAccount}/${activeChatPhone}/status`, {
+            method: 'POST',
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        if (res.success) {
+            if (allChats[activeChatPhone]) {
+                allChats[activeChatPhone].status = newStatus;
+            }
+            if (newStatus === 'human') {
+                label.textContent = "Agent Mode (Bot Paused)";
+                label.style.color = "var(--primary)";
+            } else {
+                label.textContent = "Bot Active";
+                label.style.color = "var(--text-muted)";
+            }
+        } else {
+            toggle.checked = !toggle.checked; // revert UI
+            alert('Failed to update status');
+        }
+    } catch(e) {
+        toggle.checked = !toggle.checked; // revert UI
+        alert('Error updating status');
     }
 }
 
